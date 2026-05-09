@@ -1,0 +1,177 @@
+/* Cyberdeck Terminal Effects */
+:root {
+	--glow-neon: 0 0 20px var(--color-amber-glow-strong), 0 0 40px var(--color-amber-glow);
+	--shadow-lift: 0 8px 32px rgba(0, 0, 0, 0.4);
+	--scan-line: linear-gradient(
+		90deg,
+		transparent 49%,
+		rgba(255, 193, 7, 0.03) 50%,
+		transparent 51%
+	);
+}
+
+[data-theme="dark"] {
+	--bg-terminal: radial-gradient(ellipse at center, #0f0f14 0%, #0a0a0c 70%);
+	--card-glow: inset 0 1px 0 rgba(255, 193, 7, 0.1), 0 0 0 1px rgba(255, 193, 7, 0.2);
+}
+
+[data-theme="light"] {
+	--bg-terminal: radial-gradient(ellipse at center, #fafafc 0%, #f5f5f7 70%);
+	--card-glow: inset 0 1px 0 rgba(176, 122, 0, 0.2), 0 0 0 1px rgba(176, 122, 0, 0.3);
+}
+
+.cyber-bg {
+	background: var(--bg-terminal);
+	position: relative;
+}
+
+.cyber-bg::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	background:
+		var(--scan-line),
+		repeating-linear-gradient(
+			0deg,
+			transparent,
+			transparent 2px,
+			rgba(255, 193, 7, 0.02) 2px,
+			rgba(255, 193, 7, 0.02) 4px
+		),
+		radial-gradient(circle at 20% 80%, rgba(255, 193, 7, 0.1) 0%, transparent 50%),
+		radial-gradient(circle at 80% 20%, rgba(255, 193, 7, 0.05) 0%, transparent 50%);
+	pointer-events: none;
+	z-index: 1;
+	animation: scan 20s linear infinite;
+}
+
+@keyframes scan {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+.card-cyber {
+	background: rgba(30, 30, 42, 0.8);
+	backdrop-filter: blur(20px);
+	border: 1px solid rgba(255, 193, 7, 0.3);
+	box-shadow: var(--shadow-lift), var(--glow-neon);
+	transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	position: relative;
+	overflow: hidden;
+}
+
+[data-theme="light"] .card-cyber {
+	background: rgba(255, 255, 255, 0.9);
+	border: 1px solid rgba(176, 122, 0, 0.4);
+}
+
+.card-cyber::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(45deg, transparent 30%, rgba(255, 193, 7, 0.05) 50%, transparent 70%);
+	opacity: 0;
+	transition: opacity 0.4s;
+}
+
+.card-cyber:hover {
+	transform: translateY(-4px) scale(1.02);
+	box-shadow:
+		0 20px 60px rgba(0, 0, 0, 0.5),
+		var(--glow-neon);
+}
+
+.card-cyber:hover::before {
+	opacity: 1;
+	animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+	0%,
+	100% {
+		transform: translateX(-100%) skewX(-20deg);
+	}
+	50% {
+		transform: translateX(100%) skewX(-20deg);
+	}
+}
+
+.btn-cyber {
+	background: linear-gradient(135deg, #ff8f00, #ffc107);
+	color: #000;
+	font-weight: 700;
+	border: none;
+	padding: 0.75rem 1.5rem;
+	border-radius: 8px;
+	position: relative;
+	overflow: hidden;
+	transition: all 0.3s;
+}
+
+.btn-cyber::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+	transition: left 0.5s;
+}
+
+.btn-cyber:hover::before {
+	left: 100%;
+}
+
+.progress-cyber {
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 999px;
+	overflow: hidden;
+	position: relative;
+}
+
+.progress-cyber > div {
+	height: 8px;
+	background: linear-gradient(90deg, #ff6f00, #ffc107, #ffd54f);
+	border-radius: 999px;
+	transform: skew(-20deg);
+	animation: pipeline-flow 2s ease-in-out infinite;
+	box-shadow: 0 0 20px var(--color-amber-glow-strong);
+}
+
+@keyframes pipeline-flow {
+	0%,
+	100% {
+		box-shadow: 0 0 20px var(--color-amber-glow-strong);
+	}
+	50% {
+		box-shadow: 0 0 40px var(--color-amber-glow);
+	}
+}
+
+.fade-stagger {
+	opacity: 0;
+	transform: translateY(30px);
+	animation: stagger-in 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.fade-stagger:nth-child(1) {
+	animation-delay: 0.1s;
+}
+.fade-stagger:nth-child(2) {
+	animation-delay: 0.2s;
+}
+.fade-stagger:nth-child(3) {
+	animation-delay: 0.3s;
+}
+
+@keyframes stagger-in {
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}

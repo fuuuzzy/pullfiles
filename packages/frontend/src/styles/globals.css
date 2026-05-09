@@ -1,0 +1,199 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+/* ── Dark theme (default) ── */
+:root,
+[data-theme="dark"] {
+  --color-bg-primary: #0a0a0c;
+  --color-bg-secondary: #111116;
+  --color-bg-elevated: #18181e;
+  --color-bg-surface: #1e1e26;
+  --color-bg-hover: #252530;
+
+  --color-amber-50: #fff8e1;
+  --color-amber-100: #ffecb3;
+  --color-amber-200: #ffe082;
+  --color-amber-300: #ffd54f;
+  --color-amber-400: #ffca28;
+  --color-amber-500: #ffc107;
+  --color-amber-600: #ffb300;
+  --color-amber-700: #ff8f00;
+  --color-amber-800: #ff6f00;
+  --color-amber-glow: rgba(255, 193, 7, 0.15);
+  --color-amber-glow-strong: rgba(255, 193, 7, 0.3);
+
+  --color-status-pending: #7a7a94;
+  --color-status-downloading: #5b9cf6;
+  --color-status-downloaded: #22d3ee;
+  --color-status-uploading: #fbbf24;
+  --color-status-uploaded: #4ade80;
+  --color-status-failed: #f87171;
+
+  --color-text-primary: #f0f0f4;
+  --color-text-secondary: #a0a0b8;
+  --color-text-muted: #7a7a94;
+
+  --color-border-subtle: #22222e;
+  --color-border-default: #2a2a3a;
+  --color-border-amber: rgba(255, 193, 7, 0.2);
+
+  --color-icon-toggle: #7a7a94;
+  --color-icon-toggle-active: #ffd54f;
+}
+
+/* ── Light theme ── */
+[data-theme="light"] {
+  --color-bg-primary: #f5f5f7;
+  --color-bg-secondary: #ffffff;
+  --color-bg-elevated: #ffffff;
+  --color-bg-surface: #eeeef0;
+  --color-bg-hover: #e2e2e6;
+
+  --color-amber-50: #fff8e1;
+  --color-amber-100: #ffecb3;
+  --color-amber-200: #ffe082;
+  --color-amber-300: #c68a00;
+  --color-amber-400: #c68a00;
+  --color-amber-500: #eab308;
+  --color-amber-600: #ca8a04;
+  --color-amber-700: #845c00;
+  --color-amber-800: #6e4d00;
+  --color-amber-glow: rgba(176, 122, 0, 0.1);
+  --color-amber-glow-strong: rgba(176, 122, 0, 0.2);
+
+  --color-status-pending: #4b5563;
+  --color-status-downloading: #1d4ed8;
+  --color-status-downloaded: #0e7490;
+  --color-status-uploading: #b45309;
+  --color-status-uploaded: #15803d;
+  --color-status-failed: #b91c1c;
+
+  --color-text-primary: #000000;
+  --color-text-secondary: #333845;
+  --color-text-muted: #4b5060;
+
+  --color-border-subtle: #d1d1d6;
+  --color-border-default: #b8b8bc;
+  --color-border-amber: rgba(176, 122, 0, 0.4);
+
+  --color-icon-toggle: #4b5060;
+  --color-icon-toggle-active: #b07a00;
+}
+
+/* ── Theme toggle ── */
+.theme-toggle-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-icon-toggle);
+  transition: color 0.15s;
+}
+.theme-toggle-btn:hover {
+  color: var(--color-icon-toggle-active);
+}
+.theme-toggle-btn.active {
+  color: var(--color-icon-toggle-active);
+}
+
+/* ── Base ── */
+@theme {
+  --font-mono: 'Orbitron', 'Rajdhani', 'PingFang SC', 'Microsoft YaHei', ui-monospace, monospace;
+  --font-display: 'Orbitron', 'Rajdhani', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Rajdhani', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  font-weight: 500;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s;
+  line-height: 1.5;
+  letter-spacing: -0.025em;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Selection */
+::selection {
+  background: var(--color-amber-glow-strong);
+  color: var(--color-amber-50);
+}
+
+/* Glow animation for active items */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--color-amber-glow); }
+  50% { box-shadow: 0 0 12px 2px var(--color-amber-glow); }
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Noise texture overlay */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 1rem 0;
+  letter-spacing: -0.01em;
+  text-shadow: 0 0 15px var(--color-amber-glow);
+}
+
+.noise-bg::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.02;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  z-index: 9999;
+}
