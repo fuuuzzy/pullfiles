@@ -1,7 +1,7 @@
-import { z } from "zod";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
-import { fileURLToPath } from "url";
-import { dirname, resolve } from "path";
+import { z } from "zod";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(__dirname, "../../../.env") });
@@ -25,9 +25,7 @@ export type Config = z.infer<typeof configSchema>;
 export function loadConfig(): Config {
 	const result = configSchema.safeParse(process.env);
 	if (!result.success) {
-		console.error("Invalid environment configuration:");
-		for (const issue of result.error.issues) {
-			console.error(`  ${issue.path.join(".")}: ${issue.message}`);
+		for (const _issue of result.error.issues) {
 		}
 		process.exit(1);
 	}

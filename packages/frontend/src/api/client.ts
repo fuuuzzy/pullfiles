@@ -27,7 +27,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 	};
 
 	if (token) {
-		headers["Authorization"] = `Bearer ${token}`;
+		headers.Authorization = `Bearer ${token}`;
 	}
 
 	const res = await fetch(path, { ...options, headers });

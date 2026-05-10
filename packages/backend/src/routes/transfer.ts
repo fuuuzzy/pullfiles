@@ -1,15 +1,22 @@
 import { Router } from "express";
-import { runTransfer, cancelTransfer } from "../services/transfer-pipeline.js";
 import type { TransferContext } from "../services/transfer-pipeline.js";
+import { cancelTransfer, getTransferStatus, runTransfer } from "../services/transfer-pipeline.js";
 
 export function createTransferRoutes(ctx: TransferContext): Router {
 	const router = Router();
 
+	router.get("/status", (_req, res) => {
+		res.json({ success: true, data: getTransferStatus() });
+	});
+
 	router.post("/start", async (_req, res, next) => {
 		try {
-			runTransfer(ctx).catch((err) => {
-				console.error("[PIPELINE] Unhandled error:", err);
-			});
+			if (getTransferStatus().isRunning) {
+				res.status(400).json({ success: false, error: "Transfer is already running" });
+				return;
+			}
+
+			runTransfer(ctx).catch((_err) => {});
 
 			res.json({ success: true, data: { message: "Transfer started" } });
 		} catch (error) {

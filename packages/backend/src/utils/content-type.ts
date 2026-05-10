@@ -1,5 +1,5 @@
+import { extname } from "node:path";
 import { VIDEO_CONTENT_TYPES } from "@ls-pull-video/shared";
-import { extname } from "path";
 
 export function getContentType(filename: string): string {
 	const ext = extname(filename).toLowerCase();

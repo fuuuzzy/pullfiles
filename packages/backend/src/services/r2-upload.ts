@@ -1,7 +1,7 @@
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
 import { S3Client } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
-import { createReadStream } from "fs";
-import { stat } from "fs/promises";
 import { R2_PART_SIZE, R2_QUEUE_SIZE } from "@ls-pull-video/shared";
 import type { Config } from "../config.js";
 
@@ -13,6 +13,7 @@ export function createR2Client(config: Config) {
 			accessKeyId: config.R2_ACCESS_KEY_ID,
 			secretAccessKey: config.R2_SECRET_ACCESS_KEY,
 		},
+		forcePathStyle: true,
 	});
 
 	return {
@@ -40,16 +41,14 @@ export function createR2Client(config: Config) {
 				leavePartsOnError: false,
 			});
 
+			let abortHandler: (() => void) | undefined;
 			if (signal) {
-				const abortHandler = () => {
-					upload.abort().catch(console.error);
+				abortHandler = () => {
+					upload.abort().catch(() => {
+						// ignore abort errors
+					});
 				};
 				signal.addEventListener("abort", abortHandler);
-				
-				// Need to remove listener when done to avoid memory leaks
-				upload.done().finally(() => {
-					signal.removeEventListener("abort", abortHandler);
-				}).catch(() => {});
 			}
 
 			if (onProgress) {
@@ -60,9 +59,16 @@ export function createR2Client(config: Config) {
 				});
 			}
 
-			await upload.done();
+			try {
+				await upload.done();
+			} finally {
+				if (signal && abortHandler) {
+					signal.removeEventListener("abort", abortHandler);
+				}
+			}
 
-			return `${config.R2_CUSTOM_DOMAIN}/${r2Key}`;
+			const baseUrl = config.R2_CUSTOM_DOMAIN.replace(/\/$/, "");
+			return `${baseUrl}/${r2Key}`;
 		},
 	};
 }

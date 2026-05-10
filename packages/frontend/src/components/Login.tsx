@@ -74,17 +74,18 @@ export function Login({ onLogin }: LoginProps) {
 				<form onSubmit={handleSubmit} className="space-y-6">
 					<div className="relative">
 						<label
+							htmlFor="password"
 							className="block text-[10px] tracking-[0.2em] uppercase mb-3"
 							style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}
 						>
 							访问密码
 						</label>
 						<input
+							id="password"
 							type="password"
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
 							placeholder="请输入访问密码"
-							autoFocus
 							className="w-full px-4 py-3.5 rounded-lg text-sm outline-none transition-all duration-200"
 							style={{
 								background: "var(--color-bg-elevated)",

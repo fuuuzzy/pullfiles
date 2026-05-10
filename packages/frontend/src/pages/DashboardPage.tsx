@@ -1,15 +1,29 @@
-import { useEpisodes, useStartTransfer } from "../hooks/useEpisodes.js";
-import { useStatusSummary } from "../hooks/useStatusSummary.js";
-import { useSSE } from "../hooks/useSSE.js";
-import { SyncPanel } from "../components/SyncPanel.js";
-import { StatsBar } from "../components/Dashboard/StatsBar.js";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "../api/client.js";
 import { RecentActivity } from "../components/Dashboard/RecentActivity.js";
+import { StatsBar } from "../components/Dashboard/StatsBar.js";
+import { SyncPanel } from "../components/SyncPanel.js";
+import { useEpisodes, useStartTransfer } from "../hooks/useEpisodes.js";
+import { useSSE } from "../hooks/useSSE.js";
+import { useStatusSummary } from "../hooks/useStatusSummary.js";
 
 export function DashboardPage() {
 	const { data: summary } = useStatusSummary();
 	const { data: episodesData, isLoading: isEpisodesLoading } = useEpisodes();
 	const startTransfer = useStartTransfer();
-	const { subscribe, getProgress } = useSSE();
+	const { subscribe: _subscribe, getProgress: _getProgress, isPipelineRunning, setIsPipelineRunning } = useSSE();
+
+	// Fetch initial pipeline status
+	useQuery({
+		queryKey: ["pipelineStatus"],
+		queryFn: async () => {
+			const res = await apiFetch<{ isRunning: boolean }>("/api/transfer/status");
+			if (res) {
+				setIsPipelineRunning(res.isRunning);
+			}
+			return res;
+		},
+	});
 
 	const counts = summary ?? {
 		pending: 0,
@@ -25,7 +39,7 @@ export function DashboardPage() {
 	const episodes = episodesData?.episodes ?? [];
 
 	return (
-		<div className="p-6 space-y-6 max-w-[1400px]">
+		<div className="p-6 space-y-6">
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
@@ -59,7 +73,6 @@ export function DashboardPage() {
 			{/* Stats */}
 			<StatsBar
 				counts={counts}
-				totalSizeBytes={counts.totalSizeBytes}
 				transferredSizeBytes={counts.transferredSizeBytes}
 			/>
 
@@ -97,18 +110,22 @@ export function DashboardPage() {
 							个文件待传输
 						</p>
 						<button
+							type="button"
 							onClick={() => startTransfer.mutate()}
-							disabled={startTransfer.isPending || counts.pending === 0}
+							disabled={startTransfer.isPending || counts.pending === 0 || isPipelineRunning}
 							className="px-5 py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
 							style={{
 								background:
-									counts.pending === 0 ? "var(--color-bg-surface)" : "var(--color-amber-500)",
-								color: counts.pending === 0 ? "var(--color-text-muted)" : "#000",
+									counts.pending === 0 || isPipelineRunning
+										? "var(--color-bg-surface)"
+										: "var(--color-amber-500)",
+								color:
+									counts.pending === 0 || isPipelineRunning ? "var(--color-text-muted)" : "#000",
 								border: "none",
 								fontFamily: "var(--font-mono)",
 							}}
 						>
-							{startTransfer.isPending ? "启动中..." : "开始传输"}
+							{isPipelineRunning ? "传输中..." : startTransfer.isPending ? "启动中..." : "开始传输"}
 						</button>
 					</div>
 				</div>

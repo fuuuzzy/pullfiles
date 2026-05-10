@@ -19,15 +19,18 @@ export function createSSERoutes(): Router {
 		const onProgress = (event: unknown) => sendEvent("episode_progress", event);
 		const onStatus = (event: unknown) => sendEvent("episode_status", event);
 		const onTaskUpdate = (event: unknown) => sendEvent("task_update", event);
+		const onPipelineStatus = (event: unknown) => sendEvent("pipeline_status", event);
 
 		progressEmitter.onProgress(onProgress);
 		progressEmitter.onStatus(onStatus);
 		progressEmitter.onTaskUpdate(onTaskUpdate);
+		progressEmitter.onPipelineStatus(onPipelineStatus);
 
 		req.on("close", () => {
 			progressEmitter.off("episode_progress", onProgress);
 			progressEmitter.off("episode_status", onStatus);
 			progressEmitter.off("task_update", onTaskUpdate);
+			progressEmitter.off("pipeline_status", onPipelineStatus);
 		});
 	});
 

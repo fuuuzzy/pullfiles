@@ -1,6 +1,6 @@
+import { existsSync, mkdirSync, unlinkSync } from "node:fs";
+import { resolve } from "node:path";
 import type { Episode } from "@ls-pull-video/shared";
-import { existsSync, mkdirSync, unlinkSync } from "fs";
-import { resolve } from "path";
 import type { EpisodesRepo } from "../db/episodes.js";
 import type { TasksRepo } from "../db/tasks.js";
 import { getContentType } from "../utils/content-type.js";
@@ -20,11 +20,14 @@ export interface TransferContext {
 }
 
 let abortController: AbortController | null = null;
+let isPipelineRunning = false;
+
+export function getTransferStatus() {
+	return { isRunning: isPipelineRunning };
+}
 
 export function cancelTransfer(): void {
-	console.log("[PIPELINE] cancelTransfer called!");
 	if (abortController) {
-		console.log("[PIPELINE] aborting active controller");
 		abortController.abort();
 		abortController = null;
 	}
@@ -43,119 +46,132 @@ function isAbortError(err: unknown): boolean {
 }
 
 export async function runTransfer(ctx: TransferContext): Promise<void> {
-	const pendingEpisodes = ctx.episodesRepo.listPending();
-	if (pendingEpisodes.length === 0) return;
-
-	abortController = new AbortController();
-	const signal = abortController.signal;
-
-	mkdirSync(ctx.tempDir, { recursive: true });
-
-	const taskId = ctx.tasksRepo.create("batch", pendingEpisodes.length);
-
-	progressEmitter.emitTaskUpdate({
-		taskId,
-		totalFiles: pendingEpisodes.length,
-		completedFiles: 0,
-		failedFiles: 0,
-	});
-
-	let completed = 0;
-	let failed = 0;
-	let cancelledMidway = false;
-
-	const BATCH_SIZE = 100;
-	for (let i = 0; i < pendingEpisodes.length; i += BATCH_SIZE) {
-		if (signal.aborted) {
-			cancelledMidway = true;
-			break;
-		}
-
-		const batch = pendingEpisodes.slice(i, i + BATCH_SIZE);
-
-		let metaMap: Map<number, FileMeta>;
-		try {
-			const metas = await ctx.baidu.getFileMetas(batch.map((e) => e.baidu_fs_id));
-			metaMap = new Map<number, FileMeta>();
-			for (const meta of metas) {
-				metaMap.set(meta.fs_id, meta);
-			}
-		} catch (batchError) {
-			// Network error fetching metas: keep these episodes as pending so the next
-			// run can retry them, instead of marking 100 episodes as failed at once.
-			const msg = batchError instanceof Error ? batchError.message : String(batchError);
-			console.error(
-				`[PIPELINE] Batch metas fetch failed, keeping ${batch.length} episodes pending: ${msg}`,
-			);
-			// Stop processing further batches — likely systemic network issue
-			break;
-		}
-
-		const queue = [...batch];
-		const workers = Array.from({
-			length: Math.min(ctx.concurrentTransfers, queue.length),
-		}).map(async (_, index) => {
-			if (index > 0) {
-				await new Promise((res) => setTimeout(res, index * 1000));
-			}
-			while (queue.length > 0) {
-				if (signal.aborted) return;
-				const episode = queue.shift();
-				if (!episode) continue;
-
-				try {
-					const meta = metaMap.get(episode.baidu_fs_id);
-					await processEpisode(ctx, episode, meta, signal);
-
-					completed++;
-					ctx.tasksRepo.incrementCompleted(taskId);
-				} catch (error) {
-					// Always clean up partial temp files
-					cleanupTemp(resolve(ctx.tempDir, episode.filename));
-
-					const msg = error instanceof Error ? error.message : String(error);
-
-					if (signal.aborted || isAbortError(error)) {
-						// User-initiated cancel: roll back to pending instead of failing.
-						ctx.episodesRepo.updateStatus(episode.id, "pending");
-						progressEmitter.emitStatus({
-							episodeId: episode.id,
-							status: "pending",
-						});
-						cancelledMidway = true;
-					} else {
-						ctx.episodesRepo.updateStatus(episode.id, "failed", msg);
-						ctx.episodesRepo.incrementRetry(episode.id);
-						progressEmitter.emitStatus({
-							episodeId: episode.id,
-							status: "failed",
-							errorMessage: msg,
-						});
-						failed++;
-						ctx.tasksRepo.incrementFailed(taskId);
-					}
-				}
-
-				progressEmitter.emitTaskUpdate({
-					taskId,
-					totalFiles: pendingEpisodes.length,
-					completedFiles: completed,
-					failedFiles: failed,
-				});
-			}
-		});
-
-		await Promise.all(workers);
+	if (isPipelineRunning) {
+		return;
 	}
 
-	if (cancelledMidway || signal.aborted) {
-		ctx.tasksRepo.cancel(taskId);
-	} else if (failed === 0) {
-		ctx.tasksRepo.complete(taskId);
-	} else if (completed === 0) {
-		ctx.tasksRepo.fail(taskId, "All files failed");
-	} else {
-		ctx.tasksRepo.complete(taskId);
+	const pendingEpisodes = ctx.episodesRepo.listPending();
+	if (pendingEpisodes.length === 0) {
+		isPipelineRunning = false;
+		progressEmitter.emitPipelineStatus({ isRunning: false });
+		return;
+	}
+
+	isPipelineRunning = true;
+	progressEmitter.emitPipelineStatus({ isRunning: true });
+
+	try {
+		abortController = new AbortController();
+		const signal = abortController.signal;
+
+		mkdirSync(ctx.tempDir, { recursive: true });
+
+		const taskId = ctx.tasksRepo.create("batch", pendingEpisodes.length);
+
+		progressEmitter.emitTaskUpdate({
+			taskId,
+			totalFiles: pendingEpisodes.length,
+			completedFiles: 0,
+			failedFiles: 0,
+		});
+
+		let completed = 0;
+		let failed = 0;
+		let cancelledMidway = false;
+
+		const BATCH_SIZE = 100;
+		for (let i = 0; i < pendingEpisodes.length; i += BATCH_SIZE) {
+			if (signal.aborted) {
+				cancelledMidway = true;
+				break;
+			}
+
+			const batch = pendingEpisodes.slice(i, i + BATCH_SIZE);
+
+			let metaMap: Map<number, FileMeta>;
+			try {
+				const metas = await ctx.baidu.getFileMetas(batch.map((e) => e.baidu_fs_id));
+				metaMap = new Map<number, FileMeta>();
+				for (const meta of metas) {
+					metaMap.set(meta.fs_id, meta);
+				}
+			} catch (batchError) {
+				// Network error fetching metas: keep these episodes as pending so the next
+				// run can retry them, instead of marking 100 episodes as failed at once.
+				const _msg = batchError instanceof Error ? batchError.message : String(batchError);
+				// Stop processing further batches — likely systemic network issue
+				break;
+			}
+
+			const queue = [...batch];
+			const workers = Array.from({
+				length: Math.min(ctx.concurrentTransfers, queue.length),
+			}).map(async (_, index) => {
+				if (index > 0) {
+					await new Promise((res) => setTimeout(res, index * 1000));
+				}
+				while (queue.length > 0) {
+					if (signal.aborted) return;
+					const episode = queue.shift();
+					if (!episode) continue;
+
+					try {
+						const meta = metaMap.get(episode.baidu_fs_id);
+						await processEpisode(ctx, episode, meta, signal);
+
+						completed++;
+						ctx.tasksRepo.incrementCompleted(taskId);
+					} catch (error) {
+						// Always clean up partial temp files
+						cleanupTemp(resolve(ctx.tempDir, episode.filename));
+
+						const msg = error instanceof Error ? error.message : String(error);
+
+						if (signal.aborted || isAbortError(error)) {
+							// User-initiated cancel: roll back to pending instead of failing.
+							ctx.episodesRepo.updateStatus(episode.id, "pending");
+							progressEmitter.emitStatus({
+								episodeId: episode.id,
+								status: "pending",
+							});
+							cancelledMidway = true;
+						} else {
+							ctx.episodesRepo.updateStatus(episode.id, "failed", msg);
+							ctx.episodesRepo.incrementRetry(episode.id);
+							progressEmitter.emitStatus({
+								episodeId: episode.id,
+								status: "failed",
+								errorMessage: msg,
+							});
+							failed++;
+							ctx.tasksRepo.incrementFailed(taskId);
+						}
+					}
+
+					progressEmitter.emitTaskUpdate({
+						taskId,
+						totalFiles: pendingEpisodes.length,
+						completedFiles: completed,
+						failedFiles: failed,
+					});
+				}
+			});
+
+			await Promise.all(workers);
+		}
+
+		if (cancelledMidway || signal.aborted) {
+			ctx.tasksRepo.cancel(taskId);
+		} else if (failed === 0) {
+			ctx.tasksRepo.complete(taskId);
+		} else if (completed === 0) {
+			ctx.tasksRepo.fail(taskId, "All files failed");
+		} else {
+			ctx.tasksRepo.complete(taskId);
+		}
+	} finally {
+		isPipelineRunning = false;
+		progressEmitter.emitPipelineStatus({ isRunning: false });
 	}
 }
 
@@ -174,7 +190,7 @@ async function processEpisode(
 
 	// Resolve dlink — refresh on-demand if expired or missing.
 	const meta = await resolveDlink(ctx, episode, cachedMeta);
-	if (!meta || !meta.dlink) {
+	if (!meta?.dlink) {
 		throw new Error("File not found in Baidu Pan (may have been deleted)");
 	}
 
@@ -200,9 +216,6 @@ async function processEpisode(
 	} catch (err) {
 		// Treat 403/410 as dlink expiration — refresh once and retry.
 		if (!signal.aborted && isLikelyDlinkExpired(err)) {
-			console.warn(
-				`[PIPELINE] dlink may be expired for episode ${episode.id} (${episode.filename}), refreshing and retrying once`,
-			);
 			cleanupTemp(tempPath);
 			const refreshed = await refreshDlink(ctx, episode);
 			if (!refreshed?.dlink) {
@@ -244,30 +257,33 @@ async function processEpisode(
 	const contentType = getContentType(episode.filename);
 	const r2Key = `${ctx.r2Prefix}/${episode.filename}`;
 
-	const uploadStart = Date.now();
-	const r2Url = await ctx.r2.uploadFile(
-		tempPath,
-		r2Key,
-		contentType,
-		(loaded, total) => {
-			const elapsed = (Date.now() - uploadStart) / 1000;
-			const speed = elapsed > 0 ? loaded / elapsed : 0;
-			progressEmitter.emitProgress({
-				episodeId: episode.id,
-				phase: "upload",
-				percent: total > 0 ? Math.round((loaded / total) * 100) : 0,
-				bytesTransferred: loaded,
-				totalBytes: total,
-				speed,
-			});
-		},
-		signal,
-	);
+	try {
+		const uploadStart = Date.now();
+		const r2Url = await ctx.r2.uploadFile(
+			tempPath,
+			r2Key,
+			contentType,
+			(loaded, total) => {
+				const elapsed = (Date.now() - uploadStart) / 1000;
+				const speed = elapsed > 0 ? loaded / elapsed : 0;
+				progressEmitter.emitProgress({
+					episodeId: episode.id,
+					phase: "upload",
+					percent: total > 0 ? Math.round((loaded / total) * 100) : 0,
+					bytesTransferred: loaded,
+					totalBytes: total,
+					speed,
+				});
+			},
+			signal,
+		);
 
-	ctx.episodesRepo.updateR2Info(episode.id, r2Key, r2Url);
-	progressEmitter.emitStatus({ episodeId: episode.id, status: "uploaded" });
-
-	cleanupTemp(tempPath);
+		ctx.episodesRepo.updateR2Info(episode.id, r2Key, r2Url);
+		progressEmitter.emitStatus({ episodeId: episode.id, status: "uploaded" });
+	} finally {
+		// Ensure temp file is ALWAYS cleaned up, whether upload succeeds, fails, or is cancelled
+		cleanupTemp(tempPath);
+	}
 }
 
 async function resolveDlink(
@@ -280,16 +296,8 @@ async function resolveDlink(
 }
 
 async function refreshDlink(ctx: TransferContext, episode: Episode): Promise<FileMeta | undefined> {
-	try {
-		const metas = await ctx.baidu.getFileMetas([episode.baidu_fs_id]);
-		return metas[0];
-	} catch (err) {
-		console.error(
-			`[PIPELINE] Failed to refresh dlink for episode ${episode.id}:`,
-			err instanceof Error ? err.message : err,
-		);
-		throw err;
-	}
+	const metas = await ctx.baidu.getFileMetas([episode.baidu_fs_id]);
+	return metas[0];
 }
 
 function isLikelyDlinkExpired(err: unknown): boolean {

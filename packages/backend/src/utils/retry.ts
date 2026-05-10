@@ -24,7 +24,7 @@ export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions =
 			}
 
 			const jitter = Math.random() * 500;
-			const delay = baseDelay * Math.pow(2, attempt) + jitter;
+			const delay = baseDelay * 2 ** attempt + jitter;
 			await new Promise((resolve) => setTimeout(resolve, delay));
 		}
 	}

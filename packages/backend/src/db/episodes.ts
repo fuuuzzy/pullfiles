@@ -1,9 +1,11 @@
-import type Database from "better-sqlite3";
 import type { Episode, EpisodeStatus } from "@ls-pull-video/shared";
+import type Database from "better-sqlite3";
 
 export function createEpisodesRepo(db: Database.Database) {
 	// Migrate any existing pending episodes that have no episode_number to 'unparsed'
-	db.prepare("UPDATE episodes SET status = 'unparsed' WHERE status = 'pending' AND episode_number IS NULL").run();
+	db.prepare(
+		"UPDATE episodes SET status = 'unparsed' WHERE status = 'pending' AND episode_number IS NULL",
+	).run();
 
 	const insertStmt = db.prepare(`
     INSERT OR IGNORE INTO episodes (baidu_fs_id, baidu_path, filename, episode_number, file_size, content_type, status)
@@ -78,9 +80,7 @@ export function createEpisodesRepo(db: Database.Database) {
 			}
 			if (statuses.length === 1) {
 				return db
-					.prepare(
-						"SELECT * FROM episodes WHERE status = ? ORDER BY updated_at DESC LIMIT ?",
-					)
+					.prepare("SELECT * FROM episodes WHERE status = ? ORDER BY updated_at DESC LIMIT ?")
 					.all(statuses[0], limit) as Episode[];
 			}
 			const placeholders = statuses.map(() => "?").join(",");
@@ -153,17 +153,29 @@ export function createEpisodesRepo(db: Database.Database) {
 		},
 
 		retryFailed(id: number): boolean {
-			const result = db.prepare("UPDATE episodes SET status = 'pending', error_message = NULL, updated_at = datetime('now') WHERE id = ? AND status = 'failed'").run(id);
+			const result = db
+				.prepare(
+					"UPDATE episodes SET status = 'pending', error_message = NULL, updated_at = datetime('now') WHERE id = ? AND status = 'failed'",
+				)
+				.run(id);
 			return result.changes > 0;
 		},
 
 		retryAllFailed(): number {
-			const result = db.prepare("UPDATE episodes SET status = 'pending', error_message = NULL, updated_at = datetime('now') WHERE status = 'failed'").run();
+			const result = db
+				.prepare(
+					"UPDATE episodes SET status = 'pending', error_message = NULL, updated_at = datetime('now') WHERE status = 'failed'",
+				)
+				.run();
 			return result.changes;
 		},
 
 		resetStuckEpisodes(): number {
-			const result = db.prepare("UPDATE episodes SET status = 'pending', error_message = NULL, updated_at = datetime('now') WHERE status IN ('downloading', 'downloaded', 'uploading')").run();
+			const result = db
+				.prepare(
+					"UPDATE episodes SET status = 'pending', error_message = NULL, updated_at = datetime('now') WHERE status IN ('downloading', 'downloaded', 'uploading')",
+				)
+				.run();
 			return result.changes;
 		},
 	};

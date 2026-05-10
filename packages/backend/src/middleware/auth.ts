@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
 
 export function createAuthMiddleware(password: string) {
 	return (req: Request, res: Response, next: NextFunction): void => {

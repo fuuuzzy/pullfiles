@@ -38,7 +38,7 @@ const transferCtx: TransferContext = {
 	episodesRepo,
 	tasksRepo,
 	tempDir: config.TEMP_DIR,
-	r2Prefix: "videos",
+	r2Prefix: "supa",
 	customDomain: config.R2_CUSTOM_DOMAIN,
 	concurrentTransfers: config.CONCURRENT_TRANSFERS,
 };

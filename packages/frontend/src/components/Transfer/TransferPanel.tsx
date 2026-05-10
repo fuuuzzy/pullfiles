@@ -1,6 +1,12 @@
-import { useStartTransfer, useCancelTransfer } from "../../hooks/useEpisodes.js";
+import { useCancelTransfer, useStartTransfer } from "../../hooks/useEpisodes.js";
 
-export function TransferPanel({ pendingCount }: { pendingCount: number }) {
+export function TransferPanel({
+	pendingCount,
+	isPipelineRunning,
+}: {
+	pendingCount: number;
+	isPipelineRunning: boolean;
+}) {
 	const start = useStartTransfer();
 	const cancel = useCancelTransfer();
 
@@ -16,14 +22,23 @@ export function TransferPanel({ pendingCount }: { pendingCount: number }) {
 				<div>
 					<div className="flex items-center gap-2 mb-2">
 						<div
-							className="w-1.5 h-1.5 rounded-full"
-							style={{ background: "var(--color-amber-500)" }}
+							className={`w-1.5 h-1.5 rounded-full ${isPipelineRunning ? "animate-pulse-glow" : ""}`}
+							style={{
+								background: isPipelineRunning
+									? "var(--color-status-downloading)"
+									: "var(--color-amber-500)",
+							}}
 						/>
 						<span
 							className="text-[10px] tracking-[0.2em] uppercase font-bold"
-							style={{ color: "var(--color-amber-400)", fontFamily: "var(--font-mono)" }}
+							style={{
+								color: isPipelineRunning
+									? "var(--color-status-downloading)"
+									: "var(--color-amber-400)",
+								fontFamily: "var(--font-mono)",
+							}}
 						>
-							传输控制
+							{isPipelineRunning ? "传输管线运行中" : "传输控制"}
 						</span>
 					</div>
 					<p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
@@ -39,8 +54,9 @@ export function TransferPanel({ pendingCount }: { pendingCount: number }) {
 
 				<div className="flex gap-2">
 					<button
+						type="button"
 						onClick={() => cancel.mutate()}
-						disabled={cancel.isPending}
+						disabled={cancel.isPending || !isPipelineRunning}
 						className="px-4 py-2.5 rounded-lg text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
 						style={{
 							background: "var(--color-bg-surface)",
@@ -52,17 +68,21 @@ export function TransferPanel({ pendingCount }: { pendingCount: number }) {
 						取消
 					</button>
 					<button
+						type="button"
 						onClick={() => start.mutate()}
-						disabled={start.isPending || pendingCount === 0}
+						disabled={start.isPending || pendingCount === 0 || isPipelineRunning}
 						className="px-5 py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
 						style={{
-							background: start.isPending ? "var(--color-bg-surface)" : "var(--color-amber-500)",
-							color: start.isPending ? "var(--color-text-muted)" : "#000",
+							background:
+								start.isPending || isPipelineRunning
+									? "var(--color-bg-surface)"
+									: "var(--color-amber-500)",
+							color: start.isPending || isPipelineRunning ? "var(--color-text-muted)" : "#000",
 							border: "none",
 							fontFamily: "var(--font-mono)",
 						}}
 					>
-						{start.isPending ? "启动中..." : "开始传输"}
+						{isPipelineRunning ? "传输中..." : start.isPending ? "启动中..." : "开始传输"}
 					</button>
 				</div>
 			</div>

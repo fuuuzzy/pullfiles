@@ -1,5 +1,5 @@
-import { EventEmitter } from "events";
-import type { ProgressEvent } from "@ls-pull-video/shared";
+import { EventEmitter } from "node:events";
+import type { PipelineStatusEvent, ProgressEvent } from "@ls-pull-video/shared";
 
 export interface EpisodeStatusEvent {
 	episodeId: number;
@@ -27,6 +27,10 @@ class ProgressEmitter extends EventEmitter {
 		this.emit("task_update", event);
 	}
 
+	emitPipelineStatus(event: PipelineStatusEvent): void {
+		this.emit("pipeline_status", event);
+	}
+
 	onProgress(listener: (event: ProgressEvent) => void): void {
 		this.on("progress", listener);
 	}
@@ -37,6 +41,10 @@ class ProgressEmitter extends EventEmitter {
 
 	onTaskUpdate(listener: (event: TaskUpdateEvent) => void): void {
 		this.on("task_update", listener);
+	}
+
+	onPipelineStatus(listener: (event: PipelineStatusEvent) => void): void {
+		this.on("pipeline_status", listener);
 	}
 }
 

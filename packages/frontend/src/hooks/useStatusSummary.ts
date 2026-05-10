@@ -1,7 +1,6 @@
+import type { StatusSummary } from "@ls-pull-video/shared";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "../api/client.js";
-
-import type { StatusSummary } from "@ls-pull-video/shared";
 
 export function useStatusSummary() {
 	return useQuery({

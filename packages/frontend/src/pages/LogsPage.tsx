@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "../api/client.js";
 import type { ApiLog } from "@ls-pull-video/shared";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "../api/client.js";
 
 export function LogsPage() {
 	const queryClient = useQueryClient();
@@ -19,7 +19,7 @@ export function LogsPage() {
 	});
 
 	return (
-		<div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
+		<div className="p-6 md:p-8 space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
 					<h1
@@ -36,6 +36,7 @@ export function LogsPage() {
 					</p>
 				</div>
 				<button
+					type="button"
 					onClick={() => clearMutation.mutate()}
 					disabled={clearMutation.isPending || logs.length === 0}
 					className="px-4 py-2 rounded-lg text-xs font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--color-bg-hover)] border"
@@ -71,15 +72,10 @@ export function LogsPage() {
 								<th className="px-5 py-3.5 font-bold">响应</th>
 							</tr>
 						</thead>
-						<tbody
-							className="text-sm"
-						>
+						<tbody className="text-sm">
 							{isLoading ? (
 								Array.from({ length: 10 }).map((_, i) => (
-									<tr
-										key={i}
-										style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
-									>
+									<tr key={i} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
 										<td className="px-5 py-4">
 											<div className="h-3 w-24 bg-[var(--color-border-default)] opacity-30 rounded animate-pulse"></div>
 										</td>
@@ -125,7 +121,7 @@ export function LogsPage() {
 											}}
 										>
 											<div className="absolute left-0 top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[var(--color-amber-500)] transition-colors" />
-											{new Date(log.created_at + "Z").toLocaleString("zh-CN", {
+											{new Date(`${log.created_at}Z`).toLocaleString("zh-CN", {
 												timeZone: "Asia/Shanghai",
 												year: "numeric",
 												month: "2-digit",

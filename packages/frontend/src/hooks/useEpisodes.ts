@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "../api/client.js";
 import type { Episode, EpisodeStatus, SyncResult } from "@ls-pull-video/shared";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "../api/client.js";
 
 interface EpisodesResponse {
 	episodes: Episode[];
@@ -39,20 +39,26 @@ export function useStartTransfer() {
 		mutationFn: () => apiFetch<{ message: string }>("/api/transfer/start", { method: "POST" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["episodes"] });
+			qc.invalidateQueries({ queryKey: ["pipelineStatus"] });
 		},
 	});
 }
 
 export function useCancelTransfer() {
+	const qc = useQueryClient();
 	return useMutation({
 		mutationFn: () => apiFetch<{ message: string }>("/api/transfer/cancel", { method: "POST" }),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["pipelineStatus"] });
+		},
 	});
 }
 
 export function useRetryEpisode() {
 	const qc = useQueryClient();
 	return useMutation({
-		mutationFn: (id: number) => apiFetch<{ message: string }>(`/api/episodes/${id}/retry`, { method: "POST" }),
+		mutationFn: (id: number) =>
+			apiFetch<{ message: string }>(`/api/episodes/${id}/retry`, { method: "POST" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["episodes"] });
 			qc.invalidateQueries({ queryKey: ["status"] });

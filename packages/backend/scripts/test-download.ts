@@ -141,7 +141,6 @@ async function downloadOne(
 				if (useTty) {
 					process.stdout.write(`\r${line}   `);
 				} else {
-					console.log(line);
 				}
 			}
 		});

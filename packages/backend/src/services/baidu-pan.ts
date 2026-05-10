@@ -151,7 +151,7 @@ export function createBaiduPanClient(accessToken: string, db?: Database) {
 					method: "filemetas",
 					fsids: JSON.stringify(batch),
 					dlink: "1",
-					from_apaas:"1"
+					from_apaas: "1",
 				});
 
 				const data = await withRetry(() => fetchJson<{ list: FileMeta[] }>(url));

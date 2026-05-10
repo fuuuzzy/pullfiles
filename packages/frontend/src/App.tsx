@@ -1,13 +1,13 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { getAuthToken } from "./api/client.js";
 import { Layout } from "./components/Layout.js";
 import { Login } from "./components/Login.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
 import { EpisodesPage } from "./pages/EpisodesPage.js";
-import { TransferPage } from "./pages/TransferPage.js";
 import { LogsPage } from "./pages/LogsPage.js";
+import { TransferPage } from "./pages/TransferPage.js";
 
 const queryClient = new QueryClient({
 	defaultOptions: {

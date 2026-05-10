@@ -1,5 +1,5 @@
-import type Database from "better-sqlite3";
 import type { TransferTask } from "@ls-pull-video/shared";
+import type Database from "better-sqlite3";
 
 export function createTasksRepo(db: Database.Database) {
 	const createStmt = db.prepare(`

@@ -4,7 +4,15 @@ import { clearAuthToken } from "../api/client.js";
 import { useTheme } from "../hooks/useTheme.js";
 
 const IconDashboard = () => (
-	<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter">
+	<svg
+		className="w-4 h-4"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		strokeWidth="1.5"
+		strokeLinecap="square"
+		strokeLinejoin="miter"
+	>
 		<rect x="3" y="3" width="7" height="7" />
 		<rect x="14" y="3" width="7" height="7" />
 		<rect x="14" y="14" width="7" height="7" />
@@ -13,7 +21,15 @@ const IconDashboard = () => (
 );
 
 const IconEpisodes = () => (
-	<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter">
+	<svg
+		className="w-4 h-4"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		strokeWidth="1.5"
+		strokeLinecap="square"
+		strokeLinejoin="miter"
+	>
 		<rect x="3" y="4" width="18" height="4" />
 		<rect x="3" y="10" width="18" height="4" />
 		<rect x="3" y="16" width="18" height="4" />
@@ -22,7 +38,15 @@ const IconEpisodes = () => (
 );
 
 const IconTransfer = () => (
-	<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter">
+	<svg
+		className="w-4 h-4"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		strokeWidth="1.5"
+		strokeLinecap="square"
+		strokeLinejoin="miter"
+	>
 		<path d="M16 3l5 5-5 5" />
 		<path d="M21 8H3" />
 		<path d="M8 21l-5-5 5-5" />
@@ -31,28 +55,60 @@ const IconTransfer = () => (
 );
 
 const IconLogs = () => (
-	<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter">
+	<svg
+		className="w-4 h-4"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		strokeWidth="1.5"
+		strokeLinecap="square"
+		strokeLinejoin="miter"
+	>
 		<path d="M4 17l6-6-6-6" />
 		<path d="M12 19h8" />
 	</svg>
 );
 
 const IconSun = () => (
-	<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter">
+	<svg
+		className="w-4 h-4"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		strokeWidth="1.5"
+		strokeLinecap="square"
+		strokeLinejoin="miter"
+	>
 		<circle cx="12" cy="12" r="4" />
 		<path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41" />
 	</svg>
 );
 
 const IconSystem = () => (
-	<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter">
+	<svg
+		className="w-4 h-4"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		strokeWidth="1.5"
+		strokeLinecap="square"
+		strokeLinejoin="miter"
+	>
 		<rect x="2" y="4" width="20" height="12" />
 		<path d="M8 20h8m-4-4v4" />
 	</svg>
 );
 
 const IconMoon = () => (
-	<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter">
+	<svg
+		className="w-4 h-4"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		strokeWidth="1.5"
+		strokeLinecap="square"
+		strokeLinejoin="miter"
+	>
 		<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
 	</svg>
 );
@@ -113,9 +169,7 @@ export function Layout({ children }: { children: ReactNode }) {
 								borderLeft: isActive ? "2px solid var(--color-amber-500)" : "2px solid transparent",
 							})}
 						>
-							<span className="flex items-center justify-center w-5 h-5">
-								{item.icon}
-							</span>
+							<span className="flex items-center justify-center w-5 h-5">{item.icon}</span>
 							<span style={{ fontFamily: "var(--font-display)" }}>{item.label}</span>
 						</NavLink>
 					))}
@@ -150,7 +204,15 @@ export function Layout({ children }: { children: ReactNode }) {
 					>
 						<span className="flex items-center gap-1.5">
 							断开连接
-							<svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter">
+							<svg
+								className="w-3 h-3"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="2"
+								strokeLinecap="square"
+								strokeLinejoin="miter"
+							>
 								<path d="M5 12h14M12 5l7 7-7 7" />
 							</svg>
 						</span>

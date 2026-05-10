@@ -2,7 +2,6 @@ import type { EpisodeStatus } from "@ls-pull-video/shared";
 
 interface StatsBarProps {
 	counts: Record<EpisodeStatus, number>;
-	totalSizeBytes: number;
 	transferredSizeBytes: number;
 }
 
@@ -10,7 +9,7 @@ function formatBytes(bytes: number): string {
 	if (bytes === 0) return "0 B";
 	const units = ["B", "KB", "MB", "GB", "TB"];
 	const i = Math.floor(Math.log(bytes) / Math.log(1024));
-	return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+	return `${(bytes / 1024 ** i).toFixed(1)} ${units[i]}`;
 }
 
 const statCards: { key: EpisodeStatus | "total" | "transferred"; label: string; color: string }[] =
@@ -23,7 +22,7 @@ const statCards: { key: EpisodeStatus | "total" | "transferred"; label: string; 
 		{ key: "transferred", label: "已传输", color: "var(--color-amber-400)" },
 	];
 
-export function StatsBar({ counts, totalSizeBytes, transferredSizeBytes }: StatsBarProps) {
+export function StatsBar({ counts, transferredSizeBytes }: StatsBarProps) {
 	const total =
 		(counts.pending || 0) +
 		(counts.unparsed || 0) +

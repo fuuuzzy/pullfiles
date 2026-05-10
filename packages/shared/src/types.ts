@@ -76,6 +76,10 @@ export interface SyncResult {
 	totalFiles: number;
 }
 
+export interface PipelineStatusEvent {
+	isRunning: boolean;
+}
+
 export interface ApiResponse<T> {
 	success: boolean;
 	data?: T;

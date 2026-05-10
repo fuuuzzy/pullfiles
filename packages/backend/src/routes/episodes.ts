@@ -1,6 +1,6 @@
+import type { EpisodeStatus } from "@ls-pull-video/shared";
 import { Router } from "express";
 import type { EpisodesRepo } from "../db/episodes.js";
-import type { EpisodeStatus } from "@ls-pull-video/shared";
 
 export function createEpisodesRoutes(episodesRepo: EpisodesRepo): Router {
 	const router = Router();
@@ -12,9 +12,16 @@ export function createEpisodesRoutes(episodesRepo: EpisodesRepo): Router {
 
 		// Support multiple statuses: ?status=downloading&status=uploading
 		const statuses = statusParam
-			? (Array.isArray(statusParam) ? statusParam : [statusParam]).filter(
-					(s): s is EpisodeStatus =>
-						["pending", "downloading", "downloaded", "uploading", "uploaded", "failed", "unparsed"].includes(s),
+			? (Array.isArray(statusParam) ? statusParam : [statusParam]).filter((s): s is EpisodeStatus =>
+					[
+						"pending",
+						"downloading",
+						"downloaded",
+						"uploading",
+						"uploaded",
+						"failed",
+						"unparsed",
+					].includes(s),
 				)
 			: undefined;
 
@@ -40,7 +47,7 @@ export function createEpisodesRoutes(episodesRepo: EpisodesRepo): Router {
 		res.json({ success: true, data: episode });
 	});
 
-	router.post("/retry/all", (req, res) => {
+	router.post("/retry/all", (_req, res) => {
 		const count = episodesRepo.retryAllFailed();
 		res.json({ success: true, data: { message: `Added ${count} failed episodes back to queue` } });
 	});
@@ -48,7 +55,9 @@ export function createEpisodesRoutes(episodesRepo: EpisodesRepo): Router {
 	router.post("/:id/retry", (req, res) => {
 		const success = episodesRepo.retryFailed(Number(req.params.id));
 		if (!success) {
-			res.status(404).json({ success: false, error: "Failed episode not found or already retrying" });
+			res
+				.status(404)
+				.json({ success: false, error: "Failed episode not found or already retrying" });
 			return;
 		}
 		res.json({ success: true, data: { message: "Episode added back to queue" } });

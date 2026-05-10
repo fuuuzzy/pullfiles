@@ -1,10 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "../api/client.js";
 import type { Episode, EpisodeStatus, ProgressEvent } from "@ls-pull-video/shared";
-import { TransferPanel } from "../components/Transfer/TransferPanel.js";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { apiFetch } from "../api/client.js";
 import { TransferLog } from "../components/Transfer/TransferLog.js";
+import { TransferPanel } from "../components/Transfer/TransferPanel.js";
 import { useSSE } from "../hooks/useSSE.js";
-import { useState, useEffect } from "react";
 
 interface EpisodesResponse {
 	episodes: Episode[];
@@ -12,8 +12,20 @@ interface EpisodesResponse {
 }
 
 export function TransferPage() {
-	const { subscribe } = useSSE();
+	const { subscribe, isPipelineRunning, setIsPipelineRunning } = useSSE();
 	const [progressMap, setProgressMap] = useState<Record<number, ProgressEvent>>({});
+
+	// Fetch initial pipeline status
+	useQuery({
+		queryKey: ["pipelineStatus"],
+		queryFn: async () => {
+			const res = await apiFetch<{ isRunning: boolean }>("/api/transfer/status");
+			if (res) {
+				setIsPipelineRunning(res.isRunning);
+			}
+			return res;
+		},
+	});
 
 	// Fetch pending count for TransferPanel
 	const { data: statusData } = useQuery({
@@ -48,7 +60,7 @@ export function TransferPage() {
 	const pendingCount = counts.pending ?? 0;
 
 	return (
-		<div className="p-6 space-y-6 max-w-[1400px]">
+		<div className="p-6 space-y-6">
 			<div>
 				<h1
 					className="text-xl font-bold tracking-wide"
@@ -64,7 +76,7 @@ export function TransferPage() {
 				</p>
 			</div>
 
-			<TransferPanel pendingCount={pendingCount} />
+			<TransferPanel pendingCount={pendingCount} isPipelineRunning={isPipelineRunning} />
 			<TransferLog
 				activeEpisodes={activeEpisodes}
 				recentEpisodes={recentEpisodes}

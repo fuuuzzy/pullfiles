@@ -1,5 +1,5 @@
-import type { Database } from "better-sqlite3";
 import type { ApiLog } from "@ls-pull-video/shared";
+import type { Database } from "better-sqlite3";
 
 export function createApiLogsRepo(db: Database) {
 	return {
