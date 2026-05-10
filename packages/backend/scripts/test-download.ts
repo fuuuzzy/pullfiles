@@ -127,6 +127,7 @@ async function downloadOne(
 	}
 	const started = Date.now();
 	let lastLogged = 0;
+	const useTty = process.stdout.isTTY;
 
 	try {
 		await baidu.downloadFile(meta.dlink, dest, (bytes, total) => {
@@ -136,14 +137,17 @@ async function downloadOne(
 				const pct = total > 0 ? Math.floor((bytes / total) * 100) : 0;
 				const elapsed = (now - started) / 1000;
 				const speed = elapsed > 0 ? bytes / elapsed : 0;
-				process.stdout.write(
-					`\r[TEST]   ${pct.toString().padStart(3)}%  ${fmtBytes(bytes)}/${fmtBytes(total)}  ${fmtBytes(speed)}/s   `,
-				);
+				const line = `[TEST]   ${pct.toString().padStart(3)}%  ${fmtBytes(bytes)}/${fmtBytes(total)}  ${fmtBytes(speed)}/s`;
+				if (useTty) {
+					process.stdout.write(`\r${line}   `);
+				} else {
+					console.log(line);
+				}
 			}
 		});
-		process.stdout.write("\n");
+		if (useTty) process.stdout.write("\n");
 	} catch (err) {
-		process.stdout.write("\n");
+		if (useTty) process.stdout.write("\n");
 		result.status = "error";
 		result.error = err instanceof Error ? err.message : String(err);
 		return result;

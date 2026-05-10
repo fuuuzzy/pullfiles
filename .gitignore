@@ -6,4 +6,5 @@ dist/
 *.db-shm
 /tmp/
 .DS_Store
+*.tsbuildinfo
 .ace-tool/
