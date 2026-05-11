@@ -7,6 +7,10 @@ export type EpisodeStatus =
 	| "failed"
 	| "unparsed";
 
+export type ProjectStatus = "created" | "parsing" | "syncing" | "completed" | "failed";
+
+export type ProjectEpisodeStatus = "pending" | "downloading" | "uploaded" | "saved" | "failed";
+
 export interface Episode {
 	id: number;
 	baidu_fs_id: number;
@@ -84,4 +88,35 @@ export interface ApiResponse<T> {
 	success: boolean;
 	data?: T;
 	error?: string;
+}
+
+export interface Project {
+	id: number;
+	name: string;
+	source_link: string | null;
+	status: ProjectStatus;
+	total_episodes: number;
+	completed_episodes: number;
+	error_message: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface ProjectEpisode {
+	id: number;
+	project_id: number;
+	title: string;
+	episode_no: string;
+	total_parts: number | null;
+	language: string | null;
+	description: string | null;
+	baidu_link: string;
+	cover_filename: string | null;
+	status: ProjectEpisodeStatus;
+	error_message: string | null;
+	uploaded_files: string | null;
+	cover_r2_url: string | null;
+	saved_response: string | null;
+	created_at: string;
+	updated_at: string;
 }

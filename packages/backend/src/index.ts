@@ -13,6 +13,7 @@ installLenientHttpDispatcher();
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 import { createEpisodesRepo } from "./db/episodes.js";
+import { createProjectsRepo, createProjectEpisodesRepo } from "./db/projects.js";
 import { createTasksRepo } from "./db/tasks.js";
 import { createAuthMiddleware } from "./middleware/auth.js";
 import { createLoginRouter, createLogoutRouter, createCheckAuthRouter } from "./routes/auth.js";
@@ -25,9 +26,12 @@ import { createSSERoutes } from "./routes/sse.js";
 import { createStatusRoutes } from "./routes/status.js";
 import { createTasksRoutes } from "./routes/tasks.js";
 import { createTransferRoutes } from "./routes/transfer.js";
+import { createProjectsRoutes } from "./routes/projects.js";
 import { createBaiduPanClient } from "./services/baidu-pan.js";
+import { createBaiduShareClient } from "./services/baidu-share.js";
 import { createR2Client } from "./services/r2-upload.js";
 import type { TransferContext } from "./services/transfer-pipeline.js";
+import type { ProjectSyncContext } from "./services/project-sync.js";
 
 const config = loadConfig();
 const db = getDb(config.DB_PATH);
@@ -35,8 +39,22 @@ const db = getDb(config.DB_PATH);
 const episodesRepo = createEpisodesRepo(db);
 episodesRepo.resetStuckEpisodes();
 const tasksRepo = createTasksRepo(db);
+const projectsRepo = createProjectsRepo(db);
+const projectEpisodesRepo = createProjectEpisodesRepo(db);
 const baidu = createBaiduPanClient(config.BAIDU_ACCESS_TOKEN, db);
 const r2 = createR2Client(config);
+const shareClient = createBaiduShareClient(config.BAIDU_ACCESS_TOKEN, db);
+
+const projectSyncCtx: ProjectSyncContext = {
+	projectsRepo,
+	projectEpisodesRepo,
+	shareClient,
+	baidu,
+	r2,
+	tempDir: config.TEMP_DIR,
+	r2Prefix: "supa",
+	saveApiUrl: "https://studio.luckyshort.net/episodes",
+};
 
 const transferCtx: TransferContext = {
 	baidu,
@@ -100,6 +118,11 @@ app.use(
 	createTransferRoutes(transferCtx),
 );
 app.use("/api/logs", createAuthMiddleware(config.ACCESS_PASSWORD), createLogsRouter(db));
+app.use(
+	"/api/projects",
+	createAuthMiddleware(config.ACCESS_PASSWORD),
+	createProjectsRoutes(projectsRepo, projectEpisodesRepo, projectSyncCtx),
+);
 
 app.use(errorHandler);
 

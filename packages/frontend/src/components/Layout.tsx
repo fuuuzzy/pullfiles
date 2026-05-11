@@ -38,6 +38,22 @@ const IconEpisodes = () => (
 	</svg>
 );
 
+const IconProjects = () => (
+	<svg
+		className="w-4 h-4"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		strokeWidth="1.5"
+		strokeLinecap="square"
+		strokeLinejoin="miter"
+	>
+		<path d="M3 7v14h18V7" />
+		<path d="M21 7H3l3-4h12l3 4z" />
+		<path d="M12 11v6M9 14h6" />
+	</svg>
+);
+
 const IconTransfer = () => (
 	<svg
 		className="w-4 h-4"
@@ -116,6 +132,7 @@ const IconMoon = () => (
 
 const navItems = [
 	{ to: "/", label: "仪表盘", icon: <IconDashboard /> },
+	{ to: "/projects", label: "导入项目", icon: <IconProjects /> },
 	{ to: "/episodes", label: "剧集管理", icon: <IconEpisodes /> },
 	{ to: "/transfer", label: "传输任务", icon: <IconTransfer /> },
 	{ to: "/logs", label: "API 日志", icon: <IconLogs /> },
