@@ -23,6 +23,17 @@ export const VIDEO_CONTENT_TYPES: Record<string, string> = {
 
 export const VIDEO_EXTENSIONS = Object.keys(VIDEO_CONTENT_TYPES);
 
+export const LANGUAGE_MAP: Record<string, string> = {
+	cn: "中文",
+	en: "英语",
+	"pt-BR": "巴西葡语",
+	th: "泰语",
+	vi: "越南语",
+	ja: "日语",
+	ko: "韩语",
+	id: "印尼语",
+};
+
 export const DEFAULT_CONCURRENCY = 1;
 export const MAX_RETRIES = 3;
 export const RETRY_BASE_DELAY_MS = 1000;

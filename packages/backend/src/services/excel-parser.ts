@@ -1,3 +1,4 @@
+import { LANGUAGE_MAP } from "@ls-pull-video/shared";
 import * as XLSX from "xlsx";
 
 export interface ExcelRow {
@@ -40,11 +41,14 @@ export function parseExcel(buffer: Buffer): ExcelRow[] {
 			continue;
 		}
 
+		const rawLang = row.语言?.trim() ?? null;
+		const language = rawLang ? (LANGUAGE_MAP[rawLang] ?? rawLang) : null;
+
 		rows.push({
 			title,
 			episode_no,
 			total_parts: row.集数 ?? null,
-			language: row.语言?.trim() ?? null,
+			language,
 			description: row.剧简介?.trim() ?? null,
 			baidu_link,
 		});

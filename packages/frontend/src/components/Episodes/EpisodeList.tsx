@@ -39,10 +39,10 @@ export function EpisodeList({
 		>
 			{/* Filter bar */}
 			<div
-				className="px-5 py-3 border-b flex items-center justify-between"
+				className="px-5 py-3 border-b flex items-center justify-between flex-wrap gap-2"
 				style={{ borderColor: "var(--color-border-subtle)" }}
 			>
-				<div className="flex items-center gap-1">
+				<div className="flex items-center gap-1.5 flex-wrap">
 					{filters.map((f) => {
 						const count = f.value === "all" ? total : counts[f.value];
 						return (
@@ -67,7 +67,7 @@ export function EpisodeList({
 					<button
 						onClick={() => retryAll.mutate()}
 						disabled={retryAll.isPending}
-						className="px-3 py-1.5 rounded-md text-[11px] tracking-wide transition-all duration-150 cursor-pointer border flex items-center gap-1 disabled:opacity-50"
+						className="px-3 py-1.5 rounded-md text-[11px] tracking-wide transition-all duration-150 cursor-pointer border flex items-center gap-1.5 disabled:opacity-50"
 						style={{
 							color: "var(--color-text-primary)",
 							background: "var(--color-bg-surface)",
