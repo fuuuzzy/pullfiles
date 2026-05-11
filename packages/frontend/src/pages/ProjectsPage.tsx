@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
 	useDeleteProject,
@@ -192,7 +192,14 @@ function ProjectCard({
 	onDelete,
 	isSyncing,
 }: {
-	project: { id: number; name: string; status: string; total_episodes: number; completed_episodes: number; created_at: string };
+	project: {
+		id: number;
+		name: string;
+		status: string;
+		total_episodes: number;
+		completed_episodes: number;
+		created_at: string;
+	};
 	onView: () => void;
 	onStartSync: () => void;
 	onDelete: () => void;
@@ -302,12 +309,23 @@ function ProjectCard({
 			</div>
 
 			{status && (status.downloading > 0 || status.saved > 0 || status.failed > 0) && (
-				<div className="mt-3 flex items-center gap-4 text-xs" style={{ color: "var(--color-text-muted)" }}>
+				<div
+					className="mt-3 flex items-center gap-4 text-xs"
+					style={{ color: "var(--color-text-muted)" }}
+				>
 					{status.pending > 0 && <span>待处理: {status.pending}</span>}
-					{status.downloading > 0 && <span style={{ color: "var(--color-amber-500)" }}>下载中: {status.downloading}</span>}
-					{status.uploaded > 0 && <span style={{ color: "var(--color-blue-500)" }}>已上传: {status.uploaded}</span>}
-					{status.saved > 0 && <span style={{ color: "var(--color-green-500)" }}>已保存: {status.saved}</span>}
-					{status.failed > 0 && <span style={{ color: "var(--color-red-500)" }}>失败: {status.failed}</span>}
+					{status.downloading > 0 && (
+						<span style={{ color: "var(--color-amber-500)" }}>下载中: {status.downloading}</span>
+					)}
+					{status.uploaded > 0 && (
+						<span style={{ color: "var(--color-blue-500)" }}>已上传: {status.uploaded}</span>
+					)}
+					{status.saved > 0 && (
+						<span style={{ color: "var(--color-green-500)" }}>已保存: {status.saved}</span>
+					)}
+					{status.failed > 0 && (
+						<span style={{ color: "var(--color-red-500)" }}>失败: {status.failed}</span>
+					)}
 				</div>
 			)}
 		</div>

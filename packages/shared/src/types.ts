@@ -114,6 +114,7 @@ export interface ProjectEpisode {
 	cover_filename: string | null;
 	status: ProjectEpisodeStatus;
 	error_message: string | null;
+	retry_count: number;
 	uploaded_files: string | null;
 	cover_r2_url: string | null;
 	saved_response: string | null;

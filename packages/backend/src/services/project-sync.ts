@@ -1,11 +1,16 @@
 import { existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
+import { MAX_RETRIES } from "@ls-pull-video/shared";
 import type { ProjectEpisodesRepo, ProjectsRepo } from "../db/projects.js";
-import type { BaiduShareClient } from "./baidu-share.js";
-import type { BaiduPanClient } from "./baidu-pan.js";
-import type { R2Client } from "./r2-upload.js";
 import { getContentType } from "../utils/content-type.js";
 import { parseEpisodeNumber } from "../utils/episode-parser.js";
+import { progressEmitter } from "../utils/progress-emitter.js";
+import { withRetry } from "../utils/retry.js";
+import type { BaiduPanClient } from "./baidu-pan.js";
+import type { BaiduShareClient } from "./baidu-share.js";
+import type { R2Client } from "./r2-upload.js";
+
+const MAX_EPISODE_RETRIES = 3;
 
 export interface ProjectSyncContext {
 	projectsRepo: ProjectsRepo;
@@ -16,6 +21,7 @@ export interface ProjectSyncContext {
 	tempDir: string;
 	r2Prefix: string;
 	saveApiUrl: string;
+	concurrentSync: number;
 }
 
 interface UploadedFile {
@@ -37,6 +43,7 @@ export async function runProjectSync(ctx: ProjectSyncContext): Promise<void> {
 	}
 
 	isRunning = true;
+	progressEmitter.emitPipelineStatus({ isRunning: true });
 
 	try {
 		const projects = ctx.projectsRepo.list();
@@ -47,6 +54,7 @@ export async function runProjectSync(ctx: ProjectSyncContext): Promise<void> {
 		}
 	} finally {
 		isRunning = false;
+		progressEmitter.emitPipelineStatus({ isRunning: false });
 	}
 }
 
@@ -59,15 +67,24 @@ async function syncProject(ctx: ProjectSyncContext, projectId: number): Promise<
 		return;
 	}
 
-	for (const episode of episodes) {
-		try {
-			await syncEpisode(ctx, episode.id);
-			ctx.projectsRepo.incrementCompleted(projectId);
-		} catch (err) {
-			const msg = err instanceof Error ? err.message : String(err);
-			ctx.projectEpisodesRepo.updateStatus(episode.id, "failed", msg);
-		}
-	}
+	const queue = [...episodes];
+	const workers = Array.from({ length: Math.min(ctx.concurrentSync, queue.length) }).map(
+		async () => {
+			while (queue.length > 0) {
+				const episode = queue.shift();
+				if (!episode) continue;
+
+				try {
+					await syncEpisodeWithRetry(ctx, episode.id);
+					ctx.projectsRepo.incrementCompleted(projectId);
+				} catch {
+					// already marked failed in syncEpisodeWithRetry
+				}
+			}
+		},
+	);
+
+	await Promise.all(workers);
 
 	const remainingPending = ctx.projectEpisodesRepo.countByProjectIdAndStatus(projectId, "pending");
 	const allUploaded = remainingPending === 0;
@@ -84,13 +101,16 @@ async function syncProject(ctx: ProjectSyncContext, projectId: number): Promise<
 
 async function syncEpisode(ctx: ProjectSyncContext, episodeId: number): Promise<void> {
 	ctx.projectEpisodesRepo.updateStatus(episodeId, "downloading");
+	progressEmitter.emitStatus({ episodeId, status: "downloading" });
 
 	const episode = ctx.projectEpisodesRepo.getById(episodeId);
 	if (!episode) {
 		throw new Error("Episode not found");
 	}
 
-	const shareFiles = await ctx.shareClient.listFilesFromLink(episode.baidu_link);
+	const shareFiles = await withRetry(() => ctx.shareClient.listFilesFromLink(episode.baidu_link), {
+		maxRetries: MAX_RETRIES,
+	});
 
 	const videoFiles = shareFiles.filter((f) => {
 		const ext = f.server_filename.substring(f.server_filename.lastIndexOf(".")).toLowerCase();
@@ -106,12 +126,6 @@ async function syncEpisode(ctx: ProjectSyncContext, episodeId: number): Promise<
 		throw new Error("No video files found in share link");
 	}
 
-	if (episode.total_parts && videoFiles.length !== episode.total_parts) {
-		console.warn(
-			`Episode ${episodeId}: expected ${episode.total_parts} parts but found ${videoFiles.length} videos`,
-		);
-	}
-
 	mkdirSync(ctx.tempDir, { recursive: true });
 
 	const uploadedFiles: UploadedFile[] = [];
@@ -121,11 +135,35 @@ async function syncEpisode(ctx: ProjectSyncContext, episodeId: number): Promise<
 
 		try {
 			const dlink = await getDlink(ctx, file.fs_id);
-			await ctx.baidu.downloadFile(dlink, tempPath);
+
+			await ctx.baidu.downloadFile(dlink, tempPath, (bytes, total) => {
+				progressEmitter.emitProgress({
+					episodeId,
+					phase: "download",
+					percent: total > 0 ? Math.round((bytes / total) * 100) : 0,
+					bytesTransferred: bytes,
+					totalBytes: total,
+					speed: 0,
+				});
+			});
 
 			const contentType = getContentType(file.server_filename);
 			const r2Key = `${ctx.r2Prefix}/${episode.episode_no}/${file.server_filename}`;
-			const r2Url = await ctx.r2.uploadFile(tempPath, r2Key, contentType);
+
+			const r2Url = await withRetry(
+				() =>
+					ctx.r2.uploadFile(tempPath, r2Key, contentType, (loaded, total) => {
+						progressEmitter.emitProgress({
+							episodeId,
+							phase: "upload",
+							percent: total > 0 ? Math.round((loaded / total) * 100) : 0,
+							bytesTransferred: loaded,
+							totalBytes: total,
+							speed: 0,
+						});
+					}),
+				{ maxRetries: MAX_RETRIES },
+			);
 
 			uploadedFiles.push({
 				fs_id: file.fs_id,
@@ -147,7 +185,9 @@ async function syncEpisode(ctx: ProjectSyncContext, episodeId: number): Promise<
 
 			const contentType = getContentType(coverFile.server_filename);
 			const r2Key = `${ctx.r2Prefix}/${episode.episode_no}/cover${coverFile.server_filename.substring(coverFile.server_filename.lastIndexOf("."))}`;
-			coverR2Url = await ctx.r2.uploadFile(coverTempPath, r2Key, contentType);
+			coverR2Url = await withRetry(() => ctx.r2.uploadFile(coverTempPath, r2Key, contentType), {
+				maxRetries: MAX_RETRIES,
+			});
 
 			ctx.projectEpisodesRepo.updateCover(episodeId, coverFile.server_filename);
 		} finally {
@@ -162,18 +202,50 @@ async function syncEpisode(ctx: ProjectSyncContext, episodeId: number): Promise<
 		return a.filename.localeCompare(b.filename);
 	});
 
-	// Store the uploaded files info for later use in save API call
-	ctx.projectEpisodesRepo.updateUploadedFiles(
-		episodeId,
-		JSON.stringify(uploadedFiles),
-		coverR2Url,
-	);
+	ctx.projectEpisodesRepo.updateUploadedFiles(episodeId, JSON.stringify(uploadedFiles), coverR2Url);
 
 	ctx.projectEpisodesRepo.updateStatus(episodeId, "uploaded");
+	progressEmitter.emitStatus({ episodeId, status: "uploaded" });
+}
+
+async function syncEpisodeWithRetry(ctx: ProjectSyncContext, episodeId: number): Promise<void> {
+	try {
+		await syncEpisode(ctx, episodeId);
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+
+		if (isRetryableError(err)) {
+			const episode = ctx.projectEpisodesRepo.getById(episodeId);
+			const retries = episode?.retry_count ?? 0;
+
+			if (retries < MAX_EPISODE_RETRIES) {
+				ctx.projectEpisodesRepo.incrementRetry(episodeId);
+				ctx.projectEpisodesRepo.updateStatus(episodeId, "pending");
+				progressEmitter.emitStatus({ episodeId, status: "pending" });
+				return;
+			}
+		}
+
+		ctx.projectEpisodesRepo.updateStatus(episodeId, "failed", msg);
+		progressEmitter.emitStatus({ episodeId, status: "failed", errorMessage: msg });
+		throw err;
+	}
+}
+
+function isRetryableError(err: unknown): boolean {
+	if (!(err instanceof Error)) return false;
+	const msg = err.message.toLowerCase();
+	if (msg.includes("404") || msg.includes("not found") || msg.includes("invalid")) {
+		return false;
+	}
+	if (msg.includes("no video files")) {
+		return false;
+	}
+	return true;
 }
 
 async function getDlink(ctx: ProjectSyncContext, fsId: number): Promise<string> {
-	const metas = await ctx.baidu.getFileMetas([fsId]);
+	const metas = await withRetry(() => ctx.baidu.getFileMetas([fsId]), { maxRetries: MAX_RETRIES });
 	if (!metas[0]?.dlink) {
 		throw new Error(`Failed to get download link for fs_id: ${fsId}`);
 	}
@@ -185,7 +257,6 @@ async function callSaveApis(ctx: ProjectSyncContext, projectId: number): Promise
 
 	for (const episode of episodes) {
 		try {
-			// Retrieve stored uploaded files info
 			const uploadedFiles: UploadedFile[] = episode.uploaded_files
 				? JSON.parse(episode.uploaded_files)
 				: [];
@@ -240,11 +311,15 @@ async function callSaveApis(ctx: ProjectSyncContext, projectId: number): Promise
 				posters,
 			};
 
-			const response = await fetch(ctx.saveApiUrl, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(payload),
-			});
+			const response = await withRetry(
+				() =>
+					fetch(ctx.saveApiUrl, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(payload),
+					}),
+				{ maxRetries: MAX_RETRIES },
+			);
 
 			if (!response.ok) {
 				throw new Error(`Save API error: ${response.status}`);
@@ -252,9 +327,11 @@ async function callSaveApis(ctx: ProjectSyncContext, projectId: number): Promise
 
 			const responseText = await response.text();
 			ctx.projectEpisodesRepo.updateSaved(episode.id, responseText);
+			progressEmitter.emitStatus({ episodeId: episode.id, status: "saved" });
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
 			ctx.projectEpisodesRepo.updateStatus(episode.id, "failed", msg);
+			progressEmitter.emitStatus({ episodeId: episode.id, status: "failed", errorMessage: msg });
 		}
 	}
 }

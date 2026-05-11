@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
-import { logout } from "../api/client.js";
-import { clearAuthToken } from "../api/client.js";
+import { clearAuthToken, logout } from "../api/client.js";
 import { useTheme } from "../hooks/useTheme.js";
 
 const IconDashboard = () => (

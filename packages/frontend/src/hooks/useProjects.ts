@@ -1,6 +1,6 @@
+import type { Project, ProjectEpisode, ProjectStatus } from "@ls-pull-video/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../api/client.js";
-import type { Project, ProjectEpisode, ProjectStatus } from "@ls-pull-video/shared";
 
 interface ProjectStatusResponse {
 	projectId: number;

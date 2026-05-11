@@ -33,6 +33,7 @@ export function useSSE() {
 			onStatus: () => {
 				qc.invalidateQueries({ queryKey: ["episodes"] });
 				qc.invalidateQueries({ queryKey: ["status"] });
+				qc.invalidateQueries({ queryKey: ["projects"] });
 			},
 			onTaskUpdate: () => {
 				qc.invalidateQueries({ queryKey: ["tasks"] });

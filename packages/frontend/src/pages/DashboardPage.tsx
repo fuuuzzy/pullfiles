@@ -11,7 +11,12 @@ export function DashboardPage() {
 	const { data: summary } = useStatusSummary();
 	const { data: episodesData, isLoading: isEpisodesLoading } = useEpisodes();
 	const startTransfer = useStartTransfer();
-	const { subscribe: _subscribe, getProgress: _getProgress, isPipelineRunning, setIsPipelineRunning } = useSSE();
+	const {
+		subscribe: _subscribe,
+		getProgress: _getProgress,
+		isPipelineRunning,
+		setIsPipelineRunning,
+	} = useSSE();
 
 	// Fetch initial pipeline status
 	useQuery({
@@ -71,10 +76,7 @@ export function DashboardPage() {
 			</div>
 
 			{/* Stats */}
-			<StatsBar
-				counts={counts}
-				transferredSizeBytes={counts.transferredSizeBytes}
-			/>
+			<StatsBar counts={counts} transferredSizeBytes={counts.transferredSizeBytes} />
 
 			{/* Sync + Transfer controls */}
 			<div className="grid grid-cols-2 gap-4">

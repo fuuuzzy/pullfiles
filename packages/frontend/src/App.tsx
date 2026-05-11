@@ -7,8 +7,8 @@ import { Login } from "./components/Login.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
 import { EpisodesPage } from "./pages/EpisodesPage.js";
 import { LogsPage } from "./pages/LogsPage.js";
-import { ProjectsPage } from "./pages/ProjectsPage.js";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage.js";
+import { ProjectsPage } from "./pages/ProjectsPage.js";
 import { TransferPage } from "./pages/TransferPage.js";
 
 const queryClient = new QueryClient({

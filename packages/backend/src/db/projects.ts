@@ -1,4 +1,9 @@
-import type { Project, ProjectEpisode, ProjectEpisodeStatus, ProjectStatus } from "@ls-pull-video/shared";
+import type {
+	Project,
+	ProjectEpisode,
+	ProjectEpisodeStatus,
+	ProjectStatus,
+} from "@ls-pull-video/shared";
 import type Database from "better-sqlite3";
 
 export function createProjectsRepo(db: Database.Database) {
@@ -61,6 +66,15 @@ export function createProjectsRepo(db: Database.Database) {
 			const result = db.prepare("DELETE FROM projects WHERE id = ?").run(id);
 			return result.changes > 0;
 		},
+
+		resetStuckProjects(): number {
+			const result = db
+				.prepare(
+					"UPDATE projects SET status = 'created', error_message = NULL, updated_at = datetime('now') WHERE status IN ('parsing', 'syncing')",
+				)
+				.run();
+			return result.changes;
+		},
 	};
 }
 
@@ -70,6 +84,11 @@ export function createProjectEpisodesRepo(db: Database.Database) {
 	const insertStmt = db.prepare(`
     INSERT INTO project_episodes (project_id, title, episode_no, total_parts, language, description, baidu_link, cover_filename, status)
     VALUES (@project_id, @title, @episode_no, @total_parts, @language, @description, @baidu_link, @cover_filename, @status)
+  `);
+
+	const incrementRetryStmt = db.prepare(`
+    UPDATE project_episodes SET retry_count = retry_count + 1, updated_at = datetime('now')
+    WHERE id = @id
   `);
 
 	const updateStatusStmt = db.prepare(`
@@ -112,6 +131,36 @@ export function createProjectEpisodesRepo(db: Database.Database) {
 				status: "pending",
 			});
 			return Number(result.lastInsertRowid);
+		},
+
+		bulkInsert(
+			episodes: Array<{
+				project_id: number;
+				title: string;
+				episode_no: string;
+				total_parts: number | null;
+				language: string | null;
+				description: string | null;
+				baidu_link: string;
+				cover_filename?: string | null;
+			}>,
+		): number {
+			const insertTx = db.transaction((rows: typeof episodes) => {
+				let count = 0;
+				for (const row of rows) {
+					const result = insertStmt.run({
+						...row,
+						cover_filename: row.cover_filename ?? null,
+						language: row.language ?? null,
+						description: row.description ?? null,
+						total_parts: row.total_parts ?? null,
+						status: "pending",
+					});
+					if (result.changes > 0) count++;
+				}
+				return count;
+			});
+			return insertTx(episodes);
 		},
 
 		getById(id: number): ProjectEpisode | undefined {
@@ -185,9 +234,20 @@ export function createProjectEpisodesRepo(db: Database.Database) {
 		},
 
 		deleteByProjectId(projectId: number): number {
+			const result = db.prepare("DELETE FROM project_episodes WHERE project_id = ?").run(projectId);
+			return result.changes;
+		},
+
+		incrementRetry(id: number): void {
+			incrementRetryStmt.run({ id });
+		},
+
+		resetStuckEpisodes(): number {
 			const result = db
-				.prepare("DELETE FROM project_episodes WHERE project_id = ?")
-				.run(projectId);
+				.prepare(
+					"UPDATE project_episodes SET status = 'pending', error_message = NULL, updated_at = datetime('now') WHERE status IN ('downloading', 'uploading')",
+				)
+				.run();
 			return result.changes;
 		},
 	};

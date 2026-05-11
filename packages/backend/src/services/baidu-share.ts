@@ -1,6 +1,6 @@
+import type { Database } from "better-sqlite3";
 import { createApiLogsRepo } from "../db/api-logs.js";
 import { withRetry } from "../utils/retry.js";
-import type { Database } from "better-sqlite3";
 
 const SHARE_API_BASE = "https://pan.baidu.com/rest/2.0/xpan/share";
 
@@ -120,9 +120,7 @@ export function createBaiduShareClient(accessToken: string, db?: Database) {
 				url.searchParams.set("num", String(limit));
 				url.searchParams.set("recursion", "1");
 
-				const data = await withRetry(() =>
-					fetchJson<ShareFileListResult>(url.toString()),
-				);
+				const data = await withRetry(() => fetchJson<ShareFileListResult>(url.toString()));
 
 				if (data.list) {
 					allFiles.push(...data.list.filter((f) => f.isdir === 0));

@@ -1,8 +1,9 @@
+import { rmSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
 import session from "express-session";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.js";
 import { getDb } from "./db/index.js";
 import { installLenientHttpDispatcher } from "./utils/http-dispatcher.js";
@@ -13,34 +14,39 @@ installLenientHttpDispatcher();
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 import { createEpisodesRepo } from "./db/episodes.js";
-import { createProjectsRepo, createProjectEpisodesRepo } from "./db/projects.js";
+import { createProjectEpisodesRepo, createProjectsRepo } from "./db/projects.js";
 import { createTasksRepo } from "./db/tasks.js";
 import { createAuthMiddleware } from "./middleware/auth.js";
-import { createLoginRouter, createLogoutRouter, createCheckAuthRouter } from "./routes/auth.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { logger } from "./middleware/logger.js";
+import { createCheckAuthRouter, createLoginRouter, createLogoutRouter } from "./routes/auth.js";
 import { createBaiduRoutes } from "./routes/baidu.js";
 import { createEpisodesRoutes } from "./routes/episodes.js";
 import { createLogsRouter } from "./routes/logs.js";
+import { createProjectsRoutes } from "./routes/projects.js";
 import { createSSERoutes } from "./routes/sse.js";
 import { createStatusRoutes } from "./routes/status.js";
 import { createTasksRoutes } from "./routes/tasks.js";
 import { createTransferRoutes } from "./routes/transfer.js";
-import { createProjectsRoutes } from "./routes/projects.js";
 import { createBaiduPanClient } from "./services/baidu-pan.js";
 import { createBaiduShareClient } from "./services/baidu-share.js";
+import type { ProjectSyncContext } from "./services/project-sync.js";
 import { createR2Client } from "./services/r2-upload.js";
 import type { TransferContext } from "./services/transfer-pipeline.js";
-import type { ProjectSyncContext } from "./services/project-sync.js";
 
 const config = loadConfig();
 const db = getDb(config.DB_PATH);
+
+// Clean orphaned temp files from previous crashed runs
+rmSync(config.TEMP_DIR, { recursive: true, force: true });
 
 const episodesRepo = createEpisodesRepo(db);
 episodesRepo.resetStuckEpisodes();
 const tasksRepo = createTasksRepo(db);
 const projectsRepo = createProjectsRepo(db);
 const projectEpisodesRepo = createProjectEpisodesRepo(db);
+projectsRepo.resetStuckProjects();
+projectEpisodesRepo.resetStuckEpisodes();
 const baidu = createBaiduPanClient(config.BAIDU_ACCESS_TOKEN, db);
 const r2 = createR2Client(config);
 const shareClient = createBaiduShareClient(config.BAIDU_ACCESS_TOKEN, db);
@@ -54,6 +60,7 @@ const projectSyncCtx: ProjectSyncContext = {
 	tempDir: config.TEMP_DIR,
 	r2Prefix: "supa",
 	saveApiUrl: "https://studio.luckyshort.net/episodes",
+	concurrentSync: config.CONCURRENT_SYNC,
 };
 
 const transferCtx: TransferContext = {
@@ -127,7 +134,7 @@ app.use(
 app.use(errorHandler);
 
 // SPA fallback - serve index.html for all non-API routes
-app.use((req, res) => {
+app.use((_req, res) => {
 	res.sendFile(resolve(frontendDistPath, "index.html"));
 });
 

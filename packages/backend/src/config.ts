@@ -18,6 +18,7 @@ const configSchema = z.object({
 	TEMP_DIR: z.string().default("/tmp/ls-pull-video"),
 	ACCESS_PASSWORD: z.string().min(1, "ACCESS_PASSWORD is required"),
 	CONCURRENT_TRANSFERS: z.coerce.number().default(10),
+	CONCURRENT_SYNC: z.coerce.number().default(3),
 });
 
 export type Config = z.infer<typeof configSchema>;

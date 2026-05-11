@@ -1,7 +1,6 @@
-import type { ProjectEpisodesRepo, ProjectsRepo } from "../db/projects.js";
-import type { ProjectEpisode, Project } from "@ls-pull-video/shared";
 import { Router } from "express";
 import multer from "multer";
+import type { ProjectEpisodesRepo, ProjectsRepo } from "../db/projects.js";
 import { parseExcel } from "../services/excel-parser.js";
 import type { ProjectSyncContext } from "../services/project-sync.js";
 import { getSyncStatus } from "../services/project-sync.js";
@@ -31,17 +30,17 @@ export function createProjectsRoutes(
 			const projectName = `Project-${Date.now()}`;
 			const projectId = projectsRepo.create(projectName);
 
-			for (const row of rows) {
-				projectEpisodesRepo.insert({
-					project_id: projectId,
-					title: row.title,
-					episode_no: row.episode_no,
-					total_parts: row.total_parts,
-					language: row.language,
-					description: row.description,
-					baidu_link: row.baidu_link,
-				});
-			}
+			const episodes = rows.map((row) => ({
+				project_id: projectId,
+				title: row.title,
+				episode_no: row.episode_no,
+				total_parts: row.total_parts,
+				language: row.language,
+				description: row.description,
+				baidu_link: row.baidu_link,
+			}));
+
+			projectEpisodesRepo.bulkInsert(episodes);
 
 			projectsRepo.setTotalEpisodes(projectId, rows.length);
 

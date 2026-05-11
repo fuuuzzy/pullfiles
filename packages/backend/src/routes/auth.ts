@@ -1,6 +1,5 @@
+import type { Router as ExpressRouter, Request, Response } from "express";
 import { Router } from "express";
-import type { Request, Response } from "express";
-import type { Router as ExpressRouter } from "express";
 
 export function createLoginRouter(password: string): ExpressRouter {
 	const router = Router();

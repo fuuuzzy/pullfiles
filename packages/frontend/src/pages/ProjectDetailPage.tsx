@@ -1,5 +1,10 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useProject, useProjectEpisodes, useProjectStatus, useStartSync } from "../hooks/useProjects.js";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+	useProject,
+	useProjectEpisodes,
+	useProjectStatus,
+	useStartSync,
+} from "../hooks/useProjects.js";
 
 const STATUS_COLORS: Record<string, string> = {
 	pending: "var(--color-text-muted)",
@@ -96,7 +101,9 @@ export function ProjectDetailPage() {
 							disabled={startSyncMutation.isPending}
 							className="px-5 py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
 							style={{
-								background: startSyncMutation.isPending ? "var(--color-bg-surface)" : "var(--color-amber-500)",
+								background: startSyncMutation.isPending
+									? "var(--color-bg-surface)"
+									: "var(--color-amber-500)",
 								color: startSyncMutation.isPending ? "var(--color-text-muted)" : "#000",
 								fontFamily: "var(--font-mono)",
 							}}
@@ -125,10 +132,7 @@ export function ProjectDetailPage() {
 			)}
 
 			<div>
-				<h2
-					className="text-sm font-medium mb-3"
-					style={{ color: "var(--color-text-secondary)" }}
-				>
+				<h2 className="text-sm font-medium mb-3" style={{ color: "var(--color-text-secondary)" }}>
 					剧集列表
 				</h2>
 				<div
@@ -147,22 +151,40 @@ export function ProjectDetailPage() {
 									background: "var(--color-bg-surface)",
 								}}
 							>
-								<th className="text-left p-3 font-medium" style={{ color: "var(--color-text-muted)" }}>
+								<th
+									className="text-left p-3 font-medium"
+									style={{ color: "var(--color-text-muted)" }}
+								>
 									剧标题
 								</th>
-								<th className="text-left p-3 font-medium" style={{ color: "var(--color-text-muted)" }}>
+								<th
+									className="text-left p-3 font-medium"
+									style={{ color: "var(--color-text-muted)" }}
+								>
 									剧编号
 								</th>
-								<th className="text-left p-3 font-medium" style={{ color: "var(--color-text-muted)" }}>
+								<th
+									className="text-left p-3 font-medium"
+									style={{ color: "var(--color-text-muted)" }}
+								>
 									集数
 								</th>
-								<th className="text-left p-3 font-medium" style={{ color: "var(--color-text-muted)" }}>
+								<th
+									className="text-left p-3 font-medium"
+									style={{ color: "var(--color-text-muted)" }}
+								>
 									语言
 								</th>
-								<th className="text-left p-3 font-medium" style={{ color: "var(--color-text-muted)" }}>
+								<th
+									className="text-left p-3 font-medium"
+									style={{ color: "var(--color-text-muted)" }}
+								>
 									百度云链接
 								</th>
-								<th className="text-left p-3 font-medium" style={{ color: "var(--color-text-muted)" }}>
+								<th
+									className="text-left p-3 font-medium"
+									style={{ color: "var(--color-text-muted)" }}
+								>
 									状态
 								</th>
 							</tr>
@@ -200,7 +222,8 @@ export function ProjectDetailPage() {
 										<span
 											className="px-2 py-0.5 rounded text-xs font-medium"
 											style={{
-												background: (STATUS_COLORS[episode.status] || "var(--color-text-muted)") + "20",
+												background:
+													(STATUS_COLORS[episode.status] || "var(--color-text-muted)") + "20",
 												color: STATUS_COLORS[episode.status] || "var(--color-text-muted)",
 											}}
 										>
@@ -222,15 +245,7 @@ export function ProjectDetailPage() {
 	);
 }
 
-function StatusCard({
-	label,
-	value,
-	color,
-}: {
-	label: string;
-	value: number;
-	color: string;
-}) {
+function StatusCard({ label, value, color }: { label: string; value: number; color: string }) {
 	return (
 		<div className="text-center">
 			<div className="text-2xl font-bold" style={{ color }}>
