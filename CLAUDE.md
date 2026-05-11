@@ -106,3 +106,32 @@ Copy `.env.example` to `.env`. Required vars are validated by Zod at startup —
 - Biome enforces: tabs, double quotes, semicolons, trailing commas
 - `noUnusedImports: error`, `noUnusedVariables: error`, `noExplicitAny: error`
 - TypeScript strict mode with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`
+
+## Build & PM2 Deployment
+
+### One-Command Build
+
+```bash
+pnpm build
+```
+
+This builds all packages in the monorepo (shared, backend, frontend). The backend output is at `packages/backend/dist/`.
+
+### PM2 Startup
+
+```bash
+# Build first
+pnpm build
+
+# Start with PM2 (backend only, frontend is served by backend or separate nginx)
+pm2 start packages/backend/dist/index.js --name ls-pull-video
+
+# Other useful PM2 commands
+pm2 list                      # 查看进程列表
+pm2 logs ls-pull-video        # 查看日志
+pm2 restart ls-pull-video     # 重启
+pm2 stop ls-pull-video         # 停止
+pm2 delete ls-pull-video       # 删除
+```
+
+PM2 will automatically use the `.env` file in the project root (since it's loaded from the working directory at startup).
