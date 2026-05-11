@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
+import { logout } from "../api/client.js";
 import { clearAuthToken } from "../api/client.js";
 import { useTheme } from "../hooks/useTheme.js";
 
@@ -195,7 +196,8 @@ export function Layout({ children }: { children: ReactNode }) {
 				{/* Footer */}
 				<div className="px-5 py-4 border-t" style={{ borderColor: "var(--color-border-subtle)" }}>
 					<button
-						onClick={() => {
+						onClick={async () => {
+							await logout();
 							clearAuthToken();
 							window.location.reload();
 						}}

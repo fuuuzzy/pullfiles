@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { setAuthToken } from "../api/client.js";
+import { login } from "../api/client.js";
 
 interface LoginProps {
 	onLogin: () => void;
@@ -16,18 +16,10 @@ export function Login({ onLogin }: LoginProps) {
 		setError("");
 
 		try {
-			const res = await fetch("/api/episodes?page=1&limit=1", {
-				headers: { Authorization: `Bearer ${password}` },
-			});
-
-			if (res.ok) {
-				setAuthToken(password);
-				onLogin();
-			} else {
-				setError("访问被拒绝");
-			}
-		} catch {
-			setError("连接失败");
+			await login(password);
+			onLogin();
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "登录失败");
 		} finally {
 			setLoading(false);
 		}

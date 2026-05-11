@@ -1,5 +1,8 @@
 import cors from "cors";
 import express from "express";
+import session from "express-session";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.js";
 import { getDb } from "./db/index.js";
 import { installLenientHttpDispatcher } from "./utils/http-dispatcher.js";
@@ -7,9 +10,12 @@ import { installLenientHttpDispatcher } from "./utils/http-dispatcher.js";
 // Must run before any fetch() so all outbound requests use the tuned dispatcher.
 installLenientHttpDispatcher();
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 import { createEpisodesRepo } from "./db/episodes.js";
 import { createTasksRepo } from "./db/tasks.js";
 import { createAuthMiddleware } from "./middleware/auth.js";
+import { createLoginRouter, createLogoutRouter, createCheckAuthRouter } from "./routes/auth.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { logger } from "./middleware/logger.js";
 import { createBaiduRoutes } from "./routes/baidu.js";
@@ -49,6 +55,25 @@ app.use(cors());
 app.use(express.json());
 app.use(logger);
 
+// Session middleware
+app.use(
+	session({
+		secret: config.ACCESS_PASSWORD,
+		resave: false,
+		saveUninitialized: false,
+		cookie: { secure: false, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 },
+	}),
+);
+
+// Auth routes (public)
+app.use("/api/auth", createLoginRouter(config.ACCESS_PASSWORD));
+app.use("/api/auth", createLogoutRouter());
+app.use("/api/auth", createCheckAuthRouter());
+
+// Serve frontend static files
+const frontendDistPath = resolve(__dirname, "../../frontend/dist");
+app.use(express.static(frontendDistPath));
+
 // Public routes
 app.use("/api", createSSERoutes());
 
@@ -77,5 +102,10 @@ app.use(
 app.use("/api/logs", createAuthMiddleware(config.ACCESS_PASSWORD), createLogsRouter(db));
 
 app.use(errorHandler);
+
+// SPA fallback - serve index.html for all non-API routes
+app.use((req, res) => {
+	res.sendFile(resolve(frontendDistPath, "index.html"));
+});
 
 app.listen(config.PORT, () => {});

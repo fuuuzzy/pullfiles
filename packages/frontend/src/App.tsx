@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { getAuthToken } from "./api/client.js";
+import { checkAuth } from "./api/client.js";
 import { Layout } from "./components/Layout.js";
 import { Login } from "./components/Login.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
@@ -23,21 +23,10 @@ export function App() {
 	const [checking, setChecking] = useState(true);
 
 	useEffect(() => {
-		const token = getAuthToken();
-		if (token) {
-			fetch("/api/status/summary", {
-				headers: { Authorization: `Bearer ${token}` },
-			})
-				.then((res) => {
-					if (res.ok) {
-						setAuthenticated(true);
-					}
-					setChecking(false);
-				})
-				.catch(() => setChecking(false));
-		} else {
+		checkAuth().then((isAuth) => {
+			setAuthenticated(isAuth);
 			setChecking(false);
-		}
+		});
 	}, []);
 
 	if (checking) {

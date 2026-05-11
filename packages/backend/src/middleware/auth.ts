@@ -1,14 +1,17 @@
-import type { NextFunction, Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 
-export function createAuthMiddleware(password: string) {
+declare module "express-session" {
+	interface SessionData {
+		authenticated?: boolean;
+	}
+}
+
+export function createAuthMiddleware(_password: string) {
 	return (req: Request, res: Response, next: NextFunction): void => {
-		const authHeader = req.headers.authorization;
-
-		if (!authHeader || authHeader !== `Bearer ${password}`) {
+		if (!req.session || !req.session.authenticated) {
 			res.status(401).json({ success: false, error: "Unauthorized" });
 			return;
 		}
-
 		next();
 	};
 }

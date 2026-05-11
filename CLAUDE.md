@@ -115,7 +115,7 @@ Copy `.env.example` to `.env`. Required vars are validated by Zod at startup —
 pnpm build
 ```
 
-This builds all packages in the monorepo (shared, backend, frontend). The backend output is at `packages/backend/dist/`.
+This builds all packages in the monorepo: `shared` → `backend` → `frontend`. The backend output is at `packages/backend/dist/`.
 
 ### PM2 Startup
 
@@ -123,7 +123,7 @@ This builds all packages in the monorepo (shared, backend, frontend). The backen
 # Build first
 pnpm build
 
-# Start with PM2 (backend only, frontend is served by backend or separate nginx)
+# Start with PM2 (backend serves both API and frontend static files)
 pm2 start packages/backend/dist/index.js --name ls-pull-video
 
 # Other useful PM2 commands
@@ -134,4 +134,17 @@ pm2 stop ls-pull-video         # 停止
 pm2 delete ls-pull-video       # 删除
 ```
 
-PM2 will automatically use the `.env` file in the project root (since it's loaded from the working directory at startup).
+**Nginx reverse proxy** (only port 80/443 needed):
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_set_header Host $host;
+    }
+}
+```
+
+PM2 will automatically use the `.env` file in the project root. Backend serves frontend static files on the same port, so only one port (default 3001) needs to be proxied.
