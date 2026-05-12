@@ -1,26 +1,15 @@
+import type { ProgressEvent } from "@ls-pull-video/shared";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ProgressBar } from "../components/Common/ProgressBar.js";
+import { StatusBadge } from "../components/Common/StatusBadge.js";
 import {
 	useProject,
 	useProjectEpisodes,
 	useProjectStatus,
 	useStartSync,
 } from "../hooks/useProjects.js";
-
-const STATUS_COLORS: Record<string, string> = {
-	pending: "var(--color-text-muted)",
-	downloading: "var(--color-amber-500)",
-	uploaded: "var(--color-blue-500)",
-	saved: "var(--color-green-500)",
-	failed: "var(--color-red-500)",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-	pending: "待处理",
-	downloading: "下载中",
-	uploaded: "已上传",
-	saved: "已保存",
-	failed: "失败",
-};
+import { useSSE } from "../hooks/useSSE.js";
 
 export function ProjectDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -31,6 +20,17 @@ export function ProjectDetailPage() {
 	const { data: episodes = [], isLoading: episodesLoading } = useProjectEpisodes(projectId);
 	const { data: status } = useProjectStatus(projectId);
 	const startSyncMutation = useStartSync();
+
+	const { subscribe, isPipelineRunning, registerProjectId } = useSSE();
+	const [progressMap, setProgressMap] = useState<Record<number, ProgressEvent>>({});
+
+	useEffect(() => {
+		registerProjectId(projectId);
+	}, [projectId, registerProjectId]);
+
+	useEffect(() => {
+		return subscribe(setProgressMap);
+	}, [subscribe]);
 
 	if (projectLoading || episodesLoading) {
 		return (
@@ -59,6 +59,8 @@ export function ProjectDetailPage() {
 			alert(err instanceof Error ? err.message : "启动同步失败");
 		}
 	};
+
+	const canStartSync = project.status === "created" || project.status === "failed";
 
 	return (
 		<div className="p-6 space-y-6">
@@ -93,30 +95,55 @@ export function ProjectDetailPage() {
 						创建于 {new Date(project.created_at).toLocaleString()}
 					</p>
 				</div>
-				<div className="flex items-center gap-2">
-					{project.status === "created" || project.status === "failed" ? (
+				<div className="flex items-center gap-3">
+					{isPipelineRunning && (
+						<div className="flex items-center gap-2">
+							<div
+								className="w-2 h-2 rounded-full animate-pulse-glow"
+								style={{ background: "var(--color-amber-500)" }}
+							/>
+							<span
+								className="text-[10px] tracking-[0.15em] uppercase"
+								style={{
+									color: "var(--color-amber-400)",
+									fontFamily: "var(--font-mono)",
+								}}
+							>
+								同步中
+							</span>
+						</div>
+					)}
+					{canStartSync && (
 						<button
 							type="button"
 							onClick={handleStartSync}
-							disabled={startSyncMutation.isPending}
+							disabled={startSyncMutation.isPending || isPipelineRunning}
 							className="px-5 py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
 							style={{
-								background: startSyncMutation.isPending
-									? "var(--color-bg-surface)"
-									: "var(--color-amber-500)",
-								color: startSyncMutation.isPending ? "var(--color-text-muted)" : "#000",
+								background:
+									startSyncMutation.isPending || isPipelineRunning
+										? "var(--color-bg-surface)"
+										: "var(--color-amber-500)",
+								color:
+									startSyncMutation.isPending || isPipelineRunning
+										? "var(--color-text-muted)"
+										: "#000",
 								fontFamily: "var(--font-mono)",
 							}}
 						>
-							{startSyncMutation.isPending ? "同步中..." : "开始同步"}
+							{isPipelineRunning
+								? "同步中..."
+								: startSyncMutation.isPending
+									? "启动中..."
+									: "开始同步"}
 						</button>
-					) : null}
+					)}
 				</div>
 			</div>
 
 			{status && (
 				<div
-					className="grid grid-cols-6 gap-4 rounded-xl p-5 border"
+					className="grid grid-cols-7 gap-4 rounded-xl p-5 border"
 					style={{
 						borderColor: "var(--color-border-subtle)",
 						background: "var(--color-bg-elevated)",
@@ -125,7 +152,8 @@ export function ProjectDetailPage() {
 					<StatusCard label="总剧集" value={status.total} color="var(--color-text-primary)" />
 					<StatusCard label="待处理" value={status.pending} color="var(--color-text-muted)" />
 					<StatusCard label="下载中" value={status.downloading} color="var(--color-amber-500)" />
-					<StatusCard label="已上传" value={status.uploaded} color="var(--color-blue-500)" />
+					<StatusCard label="上传中" value={status.uploading} color="var(--color-blue-500)" />
+					<StatusCard label="已上传" value={status.uploaded} color="var(--color-blue-400)" />
 					<StatusCard label="已保存" value={status.saved} color="var(--color-green-500)" />
 					<StatusCard label="失败" value={status.failed} color="var(--color-red-500)" />
 				</div>
@@ -179,59 +207,77 @@ export function ProjectDetailPage() {
 									className="text-left p-3 font-medium"
 									style={{ color: "var(--color-text-muted)" }}
 								>
-									百度云链接
+									状态
 								</th>
 								<th
 									className="text-left p-3 font-medium"
 									style={{ color: "var(--color-text-muted)" }}
 								>
-									状态
+									进度
 								</th>
 							</tr>
 						</thead>
 						<tbody>
-							{episodes.map((episode) => (
-								<tr
-									key={episode.id}
-									className="border-b last:border-b-0"
-									style={{ borderColor: "var(--color-border-subtle)" }}
-								>
-									<td className="p-3" style={{ color: "var(--color-text-primary)" }}>
-										{episode.title}
-									</td>
-									<td
-										className="p-3 font-mono text-xs"
-										style={{ color: "var(--color-text-secondary)" }}
+							{episodes.map((episode) => {
+								const progress = progressMap[episode.id];
+								const isActive = episode.status === "downloading" || episode.status === "uploading";
+
+								return (
+									<tr
+										key={episode.id}
+										className="border-b last:border-b-0"
+										style={{
+											borderColor: "var(--color-border-subtle)",
+											background: isActive ? "var(--color-bg-hover)" : undefined,
+										}}
 									>
-										{episode.episode_no}
-									</td>
-									<td className="p-3" style={{ color: "var(--color-text-secondary)" }}>
-										{episode.total_parts ?? "-"}
-									</td>
-									<td className="p-3" style={{ color: "var(--color-text-secondary)" }}>
-										{episode.language ?? "-"}
-									</td>
-									<td
-										className="p-3 max-w-[200px] truncate font-mono text-xs"
-										style={{ color: "var(--color-text-muted)" }}
-										title={episode.baidu_link}
-									>
-										{episode.baidu_link}
-									</td>
-									<td className="p-3">
-										<span
-											className="px-2 py-0.5 rounded text-xs font-medium"
-											style={{
-												background:
-													(STATUS_COLORS[episode.status] || "var(--color-text-muted)") + "20",
-												color: STATUS_COLORS[episode.status] || "var(--color-text-muted)",
-											}}
+										<td className="p-3" style={{ color: "var(--color-text-primary)" }}>
+											{episode.title}
+										</td>
+										<td
+											className="p-3 font-mono text-xs"
+											style={{ color: "var(--color-text-secondary)" }}
 										>
-											{STATUS_LABELS[episode.status] || episode.status}
-										</span>
-									</td>
-								</tr>
-							))}
+											{episode.episode_no}
+										</td>
+										<td className="p-3" style={{ color: "var(--color-text-secondary)" }}>
+											{episode.total_parts ?? "-"}
+										</td>
+										<td className="p-3" style={{ color: "var(--color-text-secondary)" }}>
+											{episode.language ?? "-"}
+										</td>
+										<td className="p-3">
+											<div className="flex flex-col gap-1">
+												<StatusBadge status={episode.status} />
+												{episode.error_message && (
+													<span
+														className="text-[10px] max-w-[200px] truncate"
+														style={{ color: "var(--color-status-failed)" }}
+														title={episode.error_message}
+													>
+														{episode.error_message}
+													</span>
+												)}
+											</div>
+										</td>
+										<td className="p-3 min-w-[280px]">
+											{isActive && progress ? (
+												<ProgressBar progress={progress} />
+											) : episode.status === "uploaded" || episode.status === "saved" ? (
+												<span
+													className="text-[10px]"
+													style={{
+														color: "var(--color-text-muted)",
+														fontFamily: "var(--font-mono)",
+													}}
+												>
+													完成
+												</span>
+											) : null}
+										</td>
+									</tr>
+								);
+							})}
 						</tbody>
 					</table>
 					{episodes.length === 0 && (

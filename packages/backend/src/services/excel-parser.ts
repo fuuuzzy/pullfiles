@@ -10,6 +10,10 @@ export interface ExcelRow {
 	baidu_link: string;
 }
 
+function extractBaiduLink(raw: string): string {
+	return raw.trim();
+}
+
 export function parseExcel(buffer: Buffer): ExcelRow[] {
 	const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
 	const sheetName = workbook.SheetNames[0];
@@ -22,34 +26,32 @@ export function parseExcel(buffer: Buffer): ExcelRow[] {
 		throw new Error("Sheet not found");
 	}
 
-	const json = XLSX.utils.sheet_to_json<{
-		剧标题?: string;
-		剧编号?: string;
-		集数?: number;
-		语言?: string;
-		剧简介?: string;
-		百度云链接?: string;
-	}>(worksheet);
+	const rawJson = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
 
 	const rows: ExcelRow[] = [];
-	for (const row of json) {
-		const title = row.剧标题?.trim();
-		const episode_no = row.剧编号?.trim();
-		const baidu_link = row.百度云链接?.trim();
+	for (const rawRow of rawJson) {
+		const row: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(rawRow)) {
+			row[key.trim()] = value;
+		}
+
+		const title = String(row.剧标题 ?? "").trim();
+		const episode_no = String(row.剧编号 ?? "").trim();
+		const baidu_link = row.百度云链接 ? extractBaiduLink(String(row.百度云链接)) : "";
 
 		if (!title || !episode_no || !baidu_link) {
 			continue;
 		}
 
-		const rawLang = row.语言?.trim() ?? null;
+		const rawLang = row.语言 ? String(row.语言).trim() : null;
 		const language = rawLang ? (LANGUAGE_MAP[rawLang] ?? rawLang) : null;
 
 		rows.push({
 			title,
 			episode_no,
-			total_parts: row.集数 ?? null,
+			total_parts: row.集数 ? Number(row.集数) : null,
 			language,
-			description: row.剧简介?.trim() ?? null,
+			description: row.剧简介 ? String(row.剧简介).trim() : null,
 			baidu_link,
 		});
 	}

@@ -107,6 +107,7 @@ export function createProjectsRoutes(
 		const episodes = projectEpisodesRepo.listByProjectId(projectId);
 		const pending = episodes.filter((e) => e.status === "pending").length;
 		const downloading = episodes.filter((e) => e.status === "downloading").length;
+		const uploading = episodes.filter((e) => e.status === "uploading").length;
 		const uploaded = episodes.filter((e) => e.status === "uploaded").length;
 		const saved = episodes.filter((e) => e.status === "saved").length;
 		const failed = episodes.filter((e) => e.status === "failed").length;
@@ -119,6 +120,7 @@ export function createProjectsRoutes(
 				total: episodes.length,
 				pending,
 				downloading,
+				uploading,
 				uploaded,
 				saved,
 				failed,
@@ -150,7 +152,9 @@ export function createProjectsRoutes(
 			}
 
 			const { runProjectSync } = await import("../services/project-sync.js");
-			runProjectSync(syncCtx).catch((_err) => {});
+			runProjectSync(syncCtx).catch((err) => {
+				console.error("[projects] Sync failed:", err instanceof Error ? err.message : err);
+			});
 
 			res.json({ success: true, data: { message: "Sync started" } });
 		} catch (error) {

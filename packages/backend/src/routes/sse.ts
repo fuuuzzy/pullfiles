@@ -27,8 +27,8 @@ export function createSSERoutes(): Router {
 		progressEmitter.onPipelineStatus(onPipelineStatus);
 
 		req.on("close", () => {
-			progressEmitter.off("episode_progress", onProgress);
-			progressEmitter.off("episode_status", onStatus);
+			progressEmitter.off("progress", onProgress);
+			progressEmitter.off("status", onStatus);
 			progressEmitter.off("task_update", onTaskUpdate);
 			progressEmitter.off("pipeline_status", onPipelineStatus);
 		});

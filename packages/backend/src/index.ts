@@ -7,6 +7,7 @@ import session from "express-session";
 import { loadConfig } from "./config.js";
 import { getDb } from "./db/index.js";
 import { installLenientHttpDispatcher } from "./utils/http-dispatcher.js";
+import { createLogger } from "./utils/logger.js";
 
 // Must run before any fetch() so all outbound requests use the tuned dispatcher.
 installLenientHttpDispatcher();
@@ -17,8 +18,8 @@ import { createEpisodesRepo } from "./db/episodes.js";
 import { createProjectEpisodesRepo, createProjectsRepo } from "./db/projects.js";
 import { createTasksRepo } from "./db/tasks.js";
 import { createAuthMiddleware } from "./middleware/auth.js";
-import { errorHandler } from "./middleware/error-handler.js";
-import { logger } from "./middleware/logger.js";
+import { createErrorHandler } from "./middleware/error-handler.js";
+import { createLoggerMiddleware } from "./middleware/logger.js";
 import { createCheckAuthRouter, createLoginRouter, createLogoutRouter } from "./routes/auth.js";
 import { createBaiduRoutes } from "./routes/baidu.js";
 import { createEpisodesRoutes } from "./routes/episodes.js";
@@ -35,6 +36,11 @@ import { createR2Client } from "./services/r2-upload.js";
 import type { TransferContext } from "./services/transfer-pipeline.js";
 
 const config = loadConfig();
+const logger = createLogger({
+	logDir: config.LOG_DIR,
+	level: config.LOG_LEVEL,
+	retentionDays: config.LOG_RETENTION_DAYS,
+});
 const db = getDb(config.DB_PATH);
 
 // Clean orphaned temp files from previous crashed runs
@@ -49,7 +55,7 @@ projectsRepo.resetStuckProjects();
 projectEpisodesRepo.resetStuckEpisodes();
 const baidu = createBaiduPanClient(config.BAIDU_ACCESS_TOKEN, db);
 const r2 = createR2Client(config);
-const shareClient = createBaiduShareClient(config.BAIDU_ACCESS_TOKEN, db);
+const shareClient = createBaiduShareClient(config.BAIDU_ACCESS_TOKEN, config.BAIDU_APP_ID, db);
 
 const projectSyncCtx: ProjectSyncContext = {
 	projectsRepo,
@@ -78,7 +84,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use(logger);
+app.use(createLoggerMiddleware(logger));
 
 // Session middleware
 app.use(
@@ -131,7 +137,7 @@ app.use(
 	createProjectsRoutes(projectsRepo, projectEpisodesRepo, projectSyncCtx),
 );
 
-app.use(errorHandler);
+app.use(createErrorHandler(logger));
 
 // SPA fallback - serve index.html for all non-API routes
 app.use((_req, res) => {

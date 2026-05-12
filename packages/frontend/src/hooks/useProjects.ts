@@ -8,6 +8,7 @@ interface ProjectStatusResponse {
 	total: number;
 	pending: number;
 	downloading: number;
+	uploading: number;
 	uploaded: number;
 	saved: number;
 	failed: number;

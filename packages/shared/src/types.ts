@@ -9,7 +9,13 @@ export type EpisodeStatus =
 
 export type ProjectStatus = "created" | "parsing" | "syncing" | "completed" | "failed";
 
-export type ProjectEpisodeStatus = "pending" | "downloading" | "uploaded" | "saved" | "failed";
+export type ProjectEpisodeStatus =
+	| "pending"
+	| "downloading"
+	| "uploading"
+	| "uploaded"
+	| "saved"
+	| "failed";
 
 export interface Episode {
 	id: number;

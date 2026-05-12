@@ -1,6 +1,8 @@
-import type { EpisodeStatus } from "@ls-pull-video/shared";
+import type { EpisodeStatus, ProjectEpisodeStatus } from "@ls-pull-video/shared";
 
-const statusConfig: Record<EpisodeStatus, { label: string; color: string; bg: string }> = {
+type AnyEpisodeStatus = EpisodeStatus | ProjectEpisodeStatus;
+
+const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
 	pending: { label: "队列中", color: "var(--color-status-pending)", bg: "rgba(74, 74, 90, 0.15)" },
 	unparsed: { label: "未解析", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.1)" },
 	downloading: {
@@ -23,11 +25,21 @@ const statusConfig: Record<EpisodeStatus, { label: string; color: string; bg: st
 		color: "var(--color-status-uploaded)",
 		bg: "rgba(34, 197, 94, 0.1)",
 	},
+	saved: {
+		label: "已保存",
+		color: "var(--color-green-500)",
+		bg: "rgba(34, 197, 94, 0.1)",
+	},
 	failed: { label: "失败", color: "var(--color-status-failed)", bg: "rgba(239, 68, 68, 0.1)" },
 };
 
-export function StatusBadge({ status }: { status: EpisodeStatus }) {
-	const config = statusConfig[status];
+export function StatusBadge({ status }: { status: AnyEpisodeStatus }) {
+	const fallback = {
+		label: status,
+		color: "var(--color-text-muted)",
+		bg: "rgba(74, 74, 90, 0.15)",
+	};
+	const config = statusConfig[status] ?? fallback;
 
 	return (
 		<span

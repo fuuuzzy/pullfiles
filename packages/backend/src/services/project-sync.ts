@@ -77,8 +77,9 @@ async function syncProject(ctx: ProjectSyncContext, projectId: number): Promise<
 				try {
 					await syncEpisodeWithRetry(ctx, episode.id);
 					ctx.projectsRepo.incrementCompleted(projectId);
-				} catch {
-					// already marked failed in syncEpisodeWithRetry
+				} catch (err) {
+					const msg = err instanceof Error ? err.message : String(err);
+					console.error(`[project-sync] Episode ${episode.id} (${episode.title}) failed: ${msg}`);
 				}
 			}
 		},
@@ -129,6 +130,7 @@ async function syncEpisode(ctx: ProjectSyncContext, episodeId: number): Promise<
 	mkdirSync(ctx.tempDir, { recursive: true });
 
 	const uploadedFiles: UploadedFile[] = [];
+	let uploadPhaseStarted = false;
 
 	for (const file of videoFiles) {
 		const tempPath = resolve(ctx.tempDir, file.server_filename);
@@ -146,6 +148,12 @@ async function syncEpisode(ctx: ProjectSyncContext, episodeId: number): Promise<
 					speed: 0,
 				});
 			});
+
+			if (!uploadPhaseStarted) {
+				uploadPhaseStarted = true;
+				ctx.projectEpisodesRepo.updateStatus(episodeId, "uploading");
+				progressEmitter.emitStatus({ episodeId, status: "uploading" });
+			}
 
 			const contentType = getContentType(file.server_filename);
 			const r2Key = `${ctx.r2Prefix}/${episode.episode_no}/${file.server_filename}`;
@@ -220,8 +228,8 @@ async function syncEpisodeWithRetry(ctx: ProjectSyncContext, episodeId: number):
 
 			if (retries < MAX_EPISODE_RETRIES) {
 				ctx.projectEpisodesRepo.incrementRetry(episodeId);
-				ctx.projectEpisodesRepo.updateStatus(episodeId, "pending");
-				progressEmitter.emitStatus({ episodeId, status: "pending" });
+				ctx.projectEpisodesRepo.updateStatus(episodeId, "pending", msg);
+				progressEmitter.emitStatus({ episodeId, status: "pending", errorMessage: msg });
 				return;
 			}
 		}

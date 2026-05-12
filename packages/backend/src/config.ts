@@ -8,6 +8,7 @@ dotenv.config({ path: resolve(__dirname, "../../../.env") });
 
 const configSchema = z.object({
 	BAIDU_ACCESS_TOKEN: z.string().min(1, "BAIDU_ACCESS_TOKEN is required"),
+	BAIDU_APP_ID: z.string().min(1, "BAIDU_APP_ID is required"),
 	R2_ACCOUNT_ID: z.string().min(1),
 	R2_ACCESS_KEY_ID: z.string().min(1),
 	R2_SECRET_ACCESS_KEY: z.string().min(1),
@@ -19,6 +20,9 @@ const configSchema = z.object({
 	ACCESS_PASSWORD: z.string().min(1, "ACCESS_PASSWORD is required"),
 	CONCURRENT_TRANSFERS: z.coerce.number().default(10),
 	CONCURRENT_SYNC: z.coerce.number().default(3),
+	LOG_DIR: z.string().default("./logs"),
+	LOG_LEVEL: z.string().default("info"),
+	LOG_RETENTION_DAYS: z.coerce.number().default(30),
 });
 
 export type Config = z.infer<typeof configSchema>;

@@ -11,6 +11,7 @@ export function useSSE() {
 	const qc = useQueryClient();
 	const progressRef = useRef<ProgressMap>({});
 	const listenersRef = useRef<Set<(map: ProgressMap) => void>>(new Set());
+	const projectIdRef = useRef<number | null>(null);
 	const [isPipelineRunning, setIsPipelineRunning] = useState<boolean>(false);
 
 	const subscribe = useCallback((listener: (map: ProgressMap) => void) => {
@@ -22,6 +23,10 @@ export function useSSE() {
 
 	const getProgress = useCallback(() => progressRef.current, []);
 
+	const registerProjectId = useCallback((projectId: number) => {
+		projectIdRef.current = projectId;
+	}, []);
+
 	useEffect(() => {
 		const es = createSSEConnection({
 			onProgress: (event) => {
@@ -31,9 +36,12 @@ export function useSSE() {
 				}
 			},
 			onStatus: () => {
-				qc.invalidateQueries({ queryKey: ["episodes"] });
-				qc.invalidateQueries({ queryKey: ["status"] });
 				qc.invalidateQueries({ queryKey: ["projects"] });
+				if (projectIdRef.current != null) {
+					qc.invalidateQueries({ queryKey: ["projects", projectIdRef.current] });
+					qc.invalidateQueries({ queryKey: ["projects", projectIdRef.current, "episodes"] });
+					qc.invalidateQueries({ queryKey: ["projects", projectIdRef.current, "status"] });
+				}
 			},
 			onTaskUpdate: () => {
 				qc.invalidateQueries({ queryKey: ["tasks"] });
@@ -47,5 +55,5 @@ export function useSSE() {
 		return () => es.close();
 	}, [qc]);
 
-	return { subscribe, getProgress, isPipelineRunning, setIsPipelineRunning };
+	return { subscribe, getProgress, isPipelineRunning, setIsPipelineRunning, registerProjectId };
 }
