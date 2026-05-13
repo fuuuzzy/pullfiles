@@ -1,10 +1,16 @@
-import { existsSync, mkdirSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Episode } from "@ls-pull-video/shared";
+import type { CompressSettingsRepo } from "../db/compress-settings.js";
 import type { EpisodesRepo } from "../db/episodes.js";
 import type { TasksRepo } from "../db/tasks.js";
 import { getContentType } from "../utils/content-type.js";
 import { progressEmitter } from "../utils/progress-emitter.js";
+import {
+	compressVideo,
+	getVideoDuration,
+	shouldCompress,
+} from "../utils/video-compress.js";
 import type { BaiduPanClient, FileMeta } from "./baidu-pan.js";
 import type { R2Client } from "./r2-upload.js";
 
@@ -17,6 +23,9 @@ export interface TransferContext {
 	r2Prefix: string;
 	customDomain: string;
 	concurrentTransfers: number;
+	ffmpegPath: string | null;
+	ffprobePath: string | null;
+	compressSettingsRepo: CompressSettingsRepo;
 }
 
 let abortController: AbortController | null = null;
@@ -251,6 +260,66 @@ async function processEpisode(
 		throw new Error("Transfer cancelled");
 	}
 
+	// --- Compression step ---
+	let uploadPath = tempPath;
+	const compressedPath = resolve(ctx.tempDir, `compressed_${episode.filename}`);
+	let compressed = false;
+
+	if (ctx.ffmpegPath && ctx.ffprobePath) {
+		const settings = ctx.compressSettingsRepo.get();
+		if (settings.enabled) {
+			const check = await shouldCompress(tempPath, settings.skip_threshold_mb);
+			if (check.should) {
+				ctx.episodesRepo.updateStatus(episode.id, "compressing");
+				progressEmitter.emitStatus({ episodeId: episode.id, status: "compressing" });
+
+				try {
+					const duration = await getVideoDuration(ctx.ffprobePath, tempPath);
+					await compressVideo(
+						ctx.ffmpegPath,
+						tempPath,
+						compressedPath,
+						settings,
+						duration,
+						signal,
+						(percent) => {
+							progressEmitter.emitProgress({
+								episodeId: episode.id,
+								phase: "compress",
+								percent,
+								bytesTransferred: 0,
+								totalBytes: 0,
+								speed: 0,
+							});
+						},
+					);
+					uploadPath = compressedPath;
+					compressed = true;
+				} catch (compressErr) {
+					// Compression failed — fall back to original file
+					cleanupTemp(compressedPath);
+					if (signal.aborted) {
+						cleanupTemp(tempPath);
+						throw new Error("Transfer cancelled");
+					}
+					// Log but continue with original file
+					progressEmitter.emitStatus({
+						episodeId: episode.id,
+						status: "downloading",
+						errorMessage: "Compression failed, uploading original",
+					});
+				}
+			}
+		}
+	}
+
+	if (signal.aborted) {
+		cleanupTemp(tempPath);
+		if (compressed) cleanupTemp(compressedPath);
+		throw new Error("Transfer cancelled");
+	}
+
+	// --- Upload step ---
 	ctx.episodesRepo.updateStatus(episode.id, "uploading");
 	progressEmitter.emitStatus({ episodeId: episode.id, status: "uploading" });
 
@@ -260,7 +329,7 @@ async function processEpisode(
 	try {
 		const uploadStart = Date.now();
 		const r2Url = await ctx.r2.uploadFile(
-			tempPath,
+			uploadPath,
 			r2Key,
 			contentType,
 			(loaded, total) => {
@@ -281,8 +350,8 @@ async function processEpisode(
 		ctx.episodesRepo.updateR2Info(episode.id, r2Key, r2Url);
 		progressEmitter.emitStatus({ episodeId: episode.id, status: "uploaded" });
 	} finally {
-		// Ensure temp file is ALWAYS cleaned up, whether upload succeeds, fails, or is cancelled
 		cleanupTemp(tempPath);
+		if (compressed) cleanupTemp(compressedPath);
 	}
 }
 

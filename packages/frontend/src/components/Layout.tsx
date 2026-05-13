@@ -100,6 +100,21 @@ const IconSun = () => (
 	</svg>
 );
 
+const IconSettings = () => (
+	<svg
+		className="w-4 h-4"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		strokeWidth="1.5"
+		strokeLinecap="square"
+		strokeLinejoin="miter"
+	>
+		<circle cx="12" cy="12" r="3" />
+		<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+	</svg>
+);
+
 const IconSystem = () => (
 	<svg
 		className="w-4 h-4"
@@ -131,10 +146,11 @@ const IconMoon = () => (
 
 const navItems = [
 	{ to: "/", label: "仪表盘", icon: <IconDashboard /> },
-	{ to: "/projects", label: "导入项目", icon: <IconProjects /> },
 	{ to: "/episodes", label: "剧集管理", icon: <IconEpisodes /> },
 	{ to: "/transfer", label: "传输任务", icon: <IconTransfer /> },
+	{ to: "/settings", label: "压缩设置", icon: <IconSettings /> },
 	{ to: "/logs", label: "API 日志", icon: <IconLogs /> },
+	{ to: "/projects", label: "导入项目", icon: <IconProjects />, disabled: true },
 ];
 
 const themeOptions = [
@@ -174,22 +190,39 @@ export function Layout({ children }: { children: ReactNode }) {
 
 				{/* Nav */}
 				<nav className="flex-1 py-4 px-3 space-y-1">
-					{navItems.map((item) => (
-						<NavLink
-							key={item.to}
-							to={item.to}
-							end={item.to === "/"}
-							className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all duration-150"
-							style={({ isActive }) => ({
-								background: isActive ? "var(--color-amber-glow)" : "transparent",
-								color: isActive ? "var(--color-amber-300)" : "var(--color-text-secondary)",
-								borderLeft: isActive ? "2px solid var(--color-amber-500)" : "2px solid transparent",
-							})}
-						>
-							<span className="flex items-center justify-center w-5 h-5">{item.icon}</span>
-							<span style={{ fontFamily: "var(--font-display)" }}>{item.label}</span>
-						</NavLink>
-					))}
+					{navItems.map((item) =>
+						item.disabled ? (
+							<div
+								key={item.to}
+								className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm cursor-not-allowed opacity-40"
+								style={{ color: "var(--color-text-muted)" }}
+							>
+								<span className="flex items-center justify-center w-5 h-5">{item.icon}</span>
+								<span style={{ fontFamily: "var(--font-display)" }}>{item.label}</span>
+								<span
+									className="ml-auto text-[9px] tracking-wider uppercase"
+									style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-mono)" }}
+								>
+									暂不可用
+								</span>
+							</div>
+						) : (
+							<NavLink
+								key={item.to}
+								to={item.to}
+								end={item.to === "/"}
+								className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all duration-150"
+								style={({ isActive }) => ({
+									background: isActive ? "var(--color-amber-glow)" : "transparent",
+									color: isActive ? "var(--color-amber-300)" : "var(--color-text-secondary)",
+									borderLeft: isActive ? "2px solid var(--color-amber-500)" : "2px solid transparent",
+								})}
+							>
+								<span className="flex items-center justify-center w-5 h-5">{item.icon}</span>
+								<span style={{ fontFamily: "var(--font-display)" }}>{item.label}</span>
+							</NavLink>
+						),
+					)}
 				</nav>
 
 				{/* Theme toggle */}

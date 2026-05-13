@@ -9,6 +9,7 @@ import { EpisodesPage } from "./pages/EpisodesPage.js";
 import { LogsPage } from "./pages/LogsPage.js";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage.js";
 import { ProjectsPage } from "./pages/ProjectsPage.js";
+import { SettingsPage } from "./pages/SettingsPage.js";
 import { TransferPage } from "./pages/TransferPage.js";
 
 const queryClient = new QueryClient({
@@ -72,6 +73,7 @@ export function App() {
 						<Route path="/episodes" element={<EpisodesPage />} />
 						<Route path="/transfer" element={<TransferPage />} />
 						<Route path="/logs" element={<LogsPage />} />
+						<Route path="/settings" element={<SettingsPage />} />
 						<Route path="*" element={<Navigate to="/" replace />} />
 					</Routes>
 				</Layout>

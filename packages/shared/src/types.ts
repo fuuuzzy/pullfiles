@@ -2,6 +2,7 @@ export type EpisodeStatus =
 	| "pending"
 	| "downloading"
 	| "downloaded"
+	| "compressing"
 	| "uploading"
 	| "uploaded"
 	| "failed"
@@ -60,7 +61,7 @@ export interface ApiLog {
 
 export interface ProgressEvent {
 	episodeId: number;
-	phase: "download" | "upload";
+	phase: "download" | "compress" | "upload";
 	percent: number;
 	bytesTransferred: number;
 	totalBytes: number;
@@ -73,6 +74,7 @@ export interface StatusSummary {
 	unparsed: number;
 	downloading: number;
 	downloaded: number;
+	compressing: number;
 	uploading: number;
 	uploaded: number;
 	failed: number;
@@ -105,6 +107,20 @@ export interface Project {
 	completed_episodes: number;
 	error_message: string | null;
 	created_at: string;
+	updated_at: string;
+}
+
+export interface CompressSettings {
+	id: number;
+	enabled: boolean;
+	skip_threshold_mb: number;
+	target_size_mb: number;
+	resolution: string;
+	crf: number;
+	preset: string;
+	audio_bitrate: string;
+	fps: number;
+	threads: number;
 	updated_at: string;
 }
 

@@ -28,10 +28,11 @@ export function StatsBar({ counts, transferredSizeBytes }: StatsBarProps) {
 		(counts.unparsed || 0) +
 		(counts.downloading || 0) +
 		(counts.downloaded || 0) +
+		(counts.compressing || 0) +
 		(counts.uploading || 0) +
 		(counts.uploaded || 0) +
 		(counts.failed || 0);
-	const active = counts.downloading + counts.uploading;
+	const active = counts.downloading + counts.compressing + counts.uploading;
 
 	const values: Record<string, number | string> = {
 		total,

@@ -18,6 +18,7 @@ export function EpisodesPage() {
 		unparsed: 0,
 		downloading: 0,
 		downloaded: 0,
+		compressing: 0,
 		uploading: 0,
 		uploaded: 0,
 		failed: 0,

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -5,7 +6,9 @@ import cors from "cors";
 import express from "express";
 import session from "express-session";
 import { loadConfig } from "./config.js";
+import { createCompressSettingsRepo } from "./db/compress-settings.js";
 import { getDb } from "./db/index.js";
+import { createSqliteSessionStore } from "./db/session-store.js";
 import { installLenientHttpDispatcher } from "./utils/http-dispatcher.js";
 import { createLogger } from "./utils/logger.js";
 
@@ -22,6 +25,7 @@ import { createErrorHandler } from "./middleware/error-handler.js";
 import { createLoggerMiddleware } from "./middleware/logger.js";
 import { createCheckAuthRouter, createLoginRouter, createLogoutRouter } from "./routes/auth.js";
 import { createBaiduRoutes } from "./routes/baidu.js";
+import { createCompressSettingsRoutes } from "./routes/compress-settings.js";
 import { createEpisodesRoutes } from "./routes/episodes.js";
 import { createLogsRouter } from "./routes/logs.js";
 import { createProjectsRoutes } from "./routes/projects.js";
@@ -56,6 +60,23 @@ projectEpisodesRepo.resetStuckEpisodes();
 const baidu = createBaiduPanClient(config.BAIDU_ACCESS_TOKEN, db);
 const r2 = createR2Client(config);
 const shareClient = createBaiduShareClient(config.BAIDU_ACCESS_TOKEN, config.BAIDU_APP_ID, db);
+const compressSettingsRepo = createCompressSettingsRepo(db);
+
+function detectBinary(name: string): string | null {
+	try {
+		return execFileSync("which", [name], { encoding: "utf-8" }).trim() || null;
+	} catch {
+		return null;
+	}
+}
+
+const ffmpegPath = detectBinary("ffmpeg");
+const ffprobePath = detectBinary("ffprobe");
+if (!ffmpegPath || !ffprobePath) {
+	logger.warn("ffmpeg or ffprobe not found — video compression disabled");
+} else {
+	logger.info(`ffmpeg detected: ${ffmpegPath}`);
+}
 
 const projectSyncCtx: ProjectSyncContext = {
 	projectsRepo,
@@ -78,6 +99,9 @@ const transferCtx: TransferContext = {
 	r2Prefix: "supa",
 	customDomain: config.R2_CUSTOM_DOMAIN,
 	concurrentTransfers: config.CONCURRENT_TRANSFERS,
+	ffmpegPath,
+	ffprobePath,
+	compressSettingsRepo,
 };
 
 const app = express();
@@ -86,13 +110,15 @@ app.use(cors());
 app.use(express.json());
 app.use(createLoggerMiddleware(logger));
 
-// Session middleware
+// Session middleware (SQLite-backed, persists across server restarts)
 app.use(
 	session({
 		secret: config.ACCESS_PASSWORD,
+		store: createSqliteSessionStore(db),
 		resave: false,
 		saveUninitialized: false,
-		cookie: { secure: false, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 },
+		rolling: true,
+		cookie: { secure: false, httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 },
 	}),
 );
 
@@ -131,6 +157,11 @@ app.use(
 	createTransferRoutes(transferCtx),
 );
 app.use("/api/logs", createAuthMiddleware(config.ACCESS_PASSWORD), createLogsRouter(db));
+app.use(
+	"/api/compress-settings",
+	createAuthMiddleware(config.ACCESS_PASSWORD),
+	createCompressSettingsRoutes(compressSettingsRepo),
+);
 app.use(
 	"/api/projects",
 	createAuthMiddleware(config.ACCESS_PASSWORD),
