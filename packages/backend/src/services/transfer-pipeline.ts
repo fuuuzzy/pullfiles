@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, renameSync, unlinkSync } from "node:fs";
-import { resolve } from "node:path";
+import { extname, resolve } from "node:path";
+import { randomUUID } from "node:crypto";
 import type { Episode } from "@ls-pull-video/shared";
 import type { CompressSettingsRepo } from "../db/compress-settings.js";
 import type { EpisodesRepo } from "../db/episodes.js";
@@ -324,7 +325,8 @@ async function processEpisode(
 	progressEmitter.emitStatus({ episodeId: episode.id, status: "uploading" });
 
 	const contentType = getContentType(episode.filename);
-	const r2Key = `${ctx.r2Prefix}/${episode.filename}`;
+	const ext = extname(episode.filename);
+	const r2Key = `${ctx.r2Prefix}/${randomUUID()}${ext}`;
 
 	try {
 		const uploadStart = Date.now();

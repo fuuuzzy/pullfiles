@@ -144,3 +144,15 @@ export interface ProjectEpisode {
 	created_at: string;
 	updated_at: string;
 }
+
+export type SyncTaskStatus = "pending" | "syncing" | "success" | "failed";
+
+export interface SyncTask {
+	task_id: number;
+	drama_title: string;
+	metadata: string; // JSON serialized
+	status: SyncTaskStatus;
+	error_message: string | null;
+	created_at: string;
+	updated_at: string;
+}

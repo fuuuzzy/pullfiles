@@ -1,14 +1,52 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSync } from "../hooks/useEpisodes.js";
+
+const HISTORY_KEY = "sync-path-history";
+const MAX_HISTORY = 20;
+
+function loadHistory(): string[] {
+	try {
+		const raw = localStorage.getItem(HISTORY_KEY);
+		return raw ? (JSON.parse(raw) as string[]) : [];
+	} catch {
+		return [];
+	}
+}
+
+function saveToHistory(paths: string[], newPath: string): string[] {
+	const updated = [newPath, ...paths.filter((p) => p !== newPath)].slice(0, MAX_HISTORY);
+	localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+	return updated;
+}
 
 export function SyncPanel() {
 	const [path, setPath] = useState("");
+	const [history, setHistory] = useState<string[]>(loadHistory);
+	const [showHistory, setShowHistory] = useState(false);
 	const sync = useSync();
+	const wrapperRef = useRef<HTMLFormElement>(null);
+
+	useEffect(() => {
+		const handleClick = (e: MouseEvent) => {
+			if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+				setShowHistory(false);
+			}
+		};
+		document.addEventListener("mousedown", handleClick);
+		return () => document.removeEventListener("mousedown", handleClick);
+	}, []);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!path.trim()) return;
+		setHistory(saveToHistory(history, path.trim()));
+		setShowHistory(false);
 		sync.mutate(path.trim());
+	};
+
+	const selectHistory = (item: string) => {
+		setPath(item);
+		setShowHistory(false);
 	};
 
 	return (
@@ -32,7 +70,7 @@ export function SyncPanel() {
 				</span>
 			</div>
 
-			<form onSubmit={handleSubmit} className="flex gap-3">
+			<form onSubmit={handleSubmit} className="flex gap-3" ref={wrapperRef}>
 				<div className="flex-1 relative">
 					<input
 						type="text"
@@ -49,12 +87,49 @@ export function SyncPanel() {
 						onFocus={(e) => {
 							e.currentTarget.style.borderColor = "var(--color-amber-500)";
 							e.currentTarget.style.boxShadow = "0 0 0 2px var(--color-amber-glow)";
+							if (history.length > 0) setShowHistory(true);
 						}}
 						onBlur={(e) => {
 							e.currentTarget.style.borderColor = "var(--color-border-default)";
 							e.currentTarget.style.boxShadow = "none";
 						}}
 					/>
+					{showHistory && history.length > 0 && (
+						<div
+							className="absolute left-0 right-0 top-full mt-1 rounded-lg overflow-hidden z-50 max-h-60 overflow-y-auto"
+							style={{
+								background: "var(--color-bg-elevated)",
+								border: "1px solid var(--color-border-default)",
+								boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+							}}
+						>
+							{history.map((item) => (
+								<button
+									type="button"
+									key={item}
+									onMouseDown={(e) => {
+										e.preventDefault();
+										selectHistory(item);
+									}}
+									className="w-full text-left px-4 py-2 text-sm transition-colors duration-100 cursor-pointer"
+									style={{
+										color: "var(--color-text-primary)",
+										fontFamily: "var(--font-mono)",
+										background: "transparent",
+										border: "none",
+									}}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.background = "var(--color-bg-surface)";
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.background = "transparent";
+									}}
+								>
+									{item}
+								</button>
+							))}
+						</div>
+					)}
 				</div>
 
 				<button

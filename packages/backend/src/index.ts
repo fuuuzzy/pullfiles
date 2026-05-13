@@ -33,6 +33,7 @@ import { createSSERoutes } from "./routes/sse.js";
 import { createStatusRoutes } from "./routes/status.js";
 import { createTasksRoutes } from "./routes/tasks.js";
 import { createTransferRoutes } from "./routes/transfer.js";
+import { createSyncRoutes } from "./routes/sync.js";
 import { createBaiduPanClient } from "./services/baidu-pan.js";
 import { createBaiduShareClient } from "./services/baidu-share.js";
 import type { ProjectSyncContext } from "./services/project-sync.js";
@@ -166,6 +167,11 @@ app.use(
 	"/api/projects",
 	createAuthMiddleware(config.ACCESS_PASSWORD),
 	createProjectsRoutes(projectsRepo, projectEpisodesRepo, projectSyncCtx),
+);
+app.use(
+	"/api/sync",
+	createAuthMiddleware(config.ACCESS_PASSWORD),
+	createSyncRoutes(),
 );
 
 app.use(createErrorHandler(logger));

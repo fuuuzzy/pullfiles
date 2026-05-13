@@ -49,6 +49,7 @@ export function useSync() {
 			}),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["episodes"] });
+			qc.invalidateQueries({ queryKey: ["episodesGrouped"] });
 			qc.invalidateQueries({ queryKey: ["status"] });
 		},
 	});
@@ -82,6 +83,7 @@ export function useRetryEpisode() {
 			apiFetch<{ message: string }>(`/api/episodes/${id}/retry`, { method: "POST" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["episodes"] });
+			qc.invalidateQueries({ queryKey: ["episodesGrouped"] });
 			qc.invalidateQueries({ queryKey: ["status"] });
 		},
 	});
@@ -93,6 +95,7 @@ export function useRetryAllFailed() {
 		mutationFn: () => apiFetch<{ message: string }>("/api/episodes/retry/all", { method: "POST" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["episodes"] });
+			qc.invalidateQueries({ queryKey: ["episodesGrouped"] });
 			qc.invalidateQueries({ queryKey: ["status"] });
 		},
 	});

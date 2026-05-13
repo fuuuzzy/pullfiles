@@ -126,6 +126,22 @@ export const CREATE_COMPRESS_SETTINGS_TABLE = `
   INSERT OR IGNORE INTO compress_settings (id) VALUES (1);
 `;
 
+export const CREATE_SYNC_TASKS_TABLE = `
+  CREATE TABLE IF NOT EXISTS sync_tasks (
+    task_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    drama_title TEXT NOT NULL,
+    metadata TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    error_message TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`;
+
+export const CREATE_SYNC_TASKS_INDEX_STATUS = `
+  CREATE INDEX IF NOT EXISTS idx_sync_tasks_status ON sync_tasks(status);
+`;
+
 export const ALL_MIGRATIONS = [
 	CREATE_EPISODES_TABLE,
 	CREATE_EPISODES_INDEX_STATUS,
@@ -140,4 +156,6 @@ export const ALL_MIGRATIONS = [
 	CREATE_COMPRESS_SETTINGS_TABLE,
 	ADD_EPISODES_PARENT_FOLDER,
 	CREATE_EPISODES_INDEX_PARENT_FOLDER,
+	CREATE_SYNC_TASKS_TABLE,
+	CREATE_SYNC_TASKS_INDEX_STATUS,
 ];

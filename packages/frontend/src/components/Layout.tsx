@@ -144,10 +144,28 @@ const IconMoon = () => (
 	</svg>
 );
 
+const IconSync = () => (
+	<svg
+		className="w-4 h-4"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		strokeWidth="1.5"
+		strokeLinecap="square"
+		strokeLinejoin="miter"
+	>
+		<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+		<path d="M3 3v5h5" />
+		<path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+		<path d="M16 21v-5h5" />
+	</svg>
+);
+
 const navItems = [
 	{ to: "/", label: "仪表盘", icon: <IconDashboard /> },
 	{ to: "/episodes", label: "剧集管理", icon: <IconEpisodes /> },
 	{ to: "/transfer", label: "传输任务", icon: <IconTransfer /> },
+	{ to: "/batch-sync", label: "批量同步", icon: <IconSync /> },
 	{ to: "/settings", label: "压缩设置", icon: <IconSettings /> },
 	{ to: "/logs", label: "API 日志", icon: <IconLogs /> },
 	{ to: "/projects", label: "导入项目", icon: <IconProjects />, disabled: true },

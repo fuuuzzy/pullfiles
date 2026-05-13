@@ -12,6 +12,8 @@ import { ProjectsPage } from "./pages/ProjectsPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { TransferPage } from "./pages/TransferPage.js";
 
+import { BatchSyncPage } from "./pages/BatchSyncPage.js";
+
 const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
@@ -72,6 +74,7 @@ export function App() {
 						<Route path="/projects/:id" element={<ProjectDetailPage />} />
 						<Route path="/episodes" element={<EpisodesPage />} />
 						<Route path="/transfer" element={<TransferPage />} />
+						<Route path="/batch-sync" element={<BatchSyncPage />} />
 						<Route path="/logs" element={<LogsPage />} />
 						<Route path="/settings" element={<SettingsPage />} />
 						<Route path="*" element={<Navigate to="/" replace />} />
