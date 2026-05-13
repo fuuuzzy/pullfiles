@@ -128,6 +128,7 @@ export function createBaiduPanClient(accessToken: string, db?: Database) {
 					start: String(start),
 					limit: String(limit),
 					recursion: "1",
+					order: "time",
 				});
 
 				const data = await withRetry(() => fetchJson<{ list: BaiduFile[] }>(url));

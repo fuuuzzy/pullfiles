@@ -7,6 +7,17 @@ interface EpisodesResponse {
 	counts: Record<EpisodeStatus, number>;
 }
 
+interface EpisodeFolder {
+	folder: string;
+	episodes: Episode[];
+	count: number;
+}
+
+interface GroupedEpisodesResponse {
+	folders: EpisodeFolder[];
+	counts: Record<EpisodeStatus, number>;
+}
+
 export function useEpisodes(options: { status?: EpisodeStatus; page?: number } = {}) {
 	const { status, page = 1 } = options;
 	const params = new URLSearchParams({ page: String(page), limit: "50" });
@@ -15,6 +26,16 @@ export function useEpisodes(options: { status?: EpisodeStatus; page?: number } =
 	return useQuery({
 		queryKey: ["episodes", status, page],
 		queryFn: () => apiFetch<EpisodesResponse>(`/api/episodes?${params}`),
+	});
+}
+
+export function useEpisodesGrouped(status?: EpisodeStatus) {
+	const params = new URLSearchParams();
+	if (status) params.set("status", status);
+
+	return useQuery({
+		queryKey: ["episodesGrouped", status],
+		queryFn: () => apiFetch<GroupedEpisodesResponse>(`/api/episodes/grouped?${params}`),
 	});
 }
 

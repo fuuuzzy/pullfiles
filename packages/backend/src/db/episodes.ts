@@ -7,9 +7,18 @@ export function createEpisodesRepo(db: Database.Database) {
 		"UPDATE episodes SET status = 'unparsed' WHERE status = 'pending' AND episode_number IS NULL",
 	).run();
 
-	const insertStmt = db.prepare(`
-    INSERT OR IGNORE INTO episodes (baidu_fs_id, baidu_path, filename, episode_number, file_size, content_type, status)
-    VALUES (@baidu_fs_id, @baidu_path, @filename, @episode_number, @file_size, @content_type, CASE WHEN @episode_number IS NULL THEN 'unparsed' ELSE 'pending' END)
+	const upsertStmt = db.prepare(`
+    INSERT INTO episodes (baidu_fs_id, baidu_path, filename, episode_number, file_size, content_type, parent_folder, status)
+    VALUES (@baidu_fs_id, @baidu_path, @filename, @episode_number, @file_size, @content_type, @parent_folder, @status)
+    ON CONFLICT(baidu_fs_id) DO UPDATE SET
+      baidu_path = excluded.baidu_path,
+      filename = excluded.filename,
+      episode_number = excluded.episode_number,
+      file_size = excluded.file_size,
+      content_type = excluded.content_type,
+      parent_folder = excluded.parent_folder,
+      updated_at = datetime('now')
+    WHERE status NOT IN ('uploaded', 'downloading', 'compressing', 'uploading')
   `);
 
 	const updateStatusStmt = db.prepare(`
@@ -28,7 +37,7 @@ export function createEpisodesRepo(db: Database.Database) {
   `);
 
 	return {
-		insert(
+		upsert(
 			ep: Omit<
 				Episode,
 				| "id"
@@ -41,8 +50,12 @@ export function createEpisodesRepo(db: Database.Database) {
 				| "created_at"
 				| "updated_at"
 			>,
+			status?: EpisodeStatus,
 		): boolean {
-			const result = insertStmt.run(ep);
+			const result = upsertStmt.run({
+				...ep,
+				status: status ?? (ep.episode_number == null ? "unparsed" : "pending"),
+			});
 			return result.changes > 0;
 		},
 
@@ -145,6 +158,33 @@ export function createEpisodesRepo(db: Database.Database) {
 					"SELECT * FROM episodes WHERE status = 'pending' ORDER BY episode_number ASC LIMIT ?",
 				)
 				.all(limit) as Episode[];
+		},
+
+		listGroupedByFolder(options: { status?: EpisodeStatus } = {}): Map<string, Episode[]> {
+			const { status } = options;
+			const episodes = status
+				? (db
+						.prepare(
+							"SELECT * FROM episodes WHERE status = ? ORDER BY COALESCE(parent_folder, ''), episode_number ASC, filename ASC",
+						)
+						.all(status) as Episode[])
+				: (db
+						.prepare(
+							"SELECT * FROM episodes ORDER BY COALESCE(parent_folder, ''), episode_number ASC, filename ASC",
+						)
+						.all() as Episode[]);
+
+			const grouped = new Map<string, Episode[]>();
+			for (const ep of episodes) {
+				const folder = ep.parent_folder || "(未分类)";
+				const list = grouped.get(folder);
+				if (list) {
+					list.push(ep);
+				} else {
+					grouped.set(folder, [ep]);
+				}
+			}
+			return grouped;
 		},
 
 		listFailed(): Episode[] {

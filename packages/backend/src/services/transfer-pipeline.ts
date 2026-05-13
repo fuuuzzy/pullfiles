@@ -4,7 +4,7 @@ import type { Episode } from "@ls-pull-video/shared";
 import type { CompressSettingsRepo } from "../db/compress-settings.js";
 import type { EpisodesRepo } from "../db/episodes.js";
 import type { TasksRepo } from "../db/tasks.js";
-import { getContentType } from "../utils/content-type.js";
+import { getContentType, isVideoFile } from "../utils/content-type.js";
 import { progressEmitter } from "../utils/progress-emitter.js";
 import {
 	compressVideo,
@@ -260,12 +260,12 @@ async function processEpisode(
 		throw new Error("Transfer cancelled");
 	}
 
-	// --- Compression step ---
+	// --- Compression step (video files only) ---
 	let uploadPath = tempPath;
 	const compressedPath = resolve(ctx.tempDir, `compressed_${episode.filename}`);
 	let compressed = false;
 
-	if (ctx.ffmpegPath && ctx.ffprobePath) {
+	if (isVideoFile(episode.filename) && ctx.ffmpegPath && ctx.ffprobePath) {
 		const settings = ctx.compressSettingsRepo.get();
 		if (settings.enabled) {
 			const check = await shouldCompress(tempPath, settings.skip_threshold_mb);

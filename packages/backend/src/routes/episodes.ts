@@ -17,6 +17,7 @@ export function createEpisodesRoutes(episodesRepo: EpisodesRepo): Router {
 						"pending",
 						"downloading",
 						"downloaded",
+						"compressing",
 						"uploading",
 						"uploaded",
 						"failed",
@@ -36,6 +37,35 @@ export function createEpisodesRoutes(episodesRepo: EpisodesRepo): Router {
 		const counts = episodesRepo.count();
 
 		res.json({ success: true, data: { episodes, counts } });
+	});
+
+	router.get("/grouped", (req, res) => {
+		const statusParam = req.query.status as string | undefined;
+		const validStatuses: EpisodeStatus[] = [
+			"pending",
+			"downloading",
+			"downloaded",
+			"compressing",
+			"uploading",
+			"uploaded",
+			"failed",
+			"unparsed",
+		];
+		const status =
+			statusParam && validStatuses.includes(statusParam as EpisodeStatus)
+				? (statusParam as EpisodeStatus)
+				: undefined;
+
+		const grouped = episodesRepo.listGroupedByFolder(status ? { status } : undefined);
+		const counts = episodesRepo.count();
+
+		const folders = Array.from(grouped.entries()).map(([folder, episodes]) => ({
+			folder,
+			episodes,
+			count: episodes.length,
+		}));
+
+		res.json({ success: true, data: { folders, counts } });
 	});
 
 	router.get("/:id", (req, res) => {

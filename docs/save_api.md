@@ -42,7 +42,7 @@
        "originalName": "xxx",
        // 默认值
        "transtoreStatus": "transtored",
-       // 文件url
+       // 文件url 取r2的url
        "uploadUrl": "xxx",
        // 类型 默认upload
        "addWay": "upload",
@@ -56,7 +56,7 @@
        "taskId": "",
        // 文件名
        "originalName": "xx",
-       // 文件url
+       // 文件url，取r2的url
        "uploadUrl": "xx",
        // 默认值
        "type": "general",

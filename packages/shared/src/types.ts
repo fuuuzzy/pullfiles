@@ -26,6 +26,7 @@ export interface Episode {
 	episode_number: number | null;
 	file_size: number | null;
 	content_type: string | null;
+	parent_folder: string | null;
 	r2_key: string | null;
 	r2_url: string | null;
 	r2_uploaded_at: string | null;

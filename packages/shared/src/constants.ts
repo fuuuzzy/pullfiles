@@ -23,6 +23,18 @@ export const VIDEO_CONTENT_TYPES: Record<string, string> = {
 
 export const VIDEO_EXTENSIONS = Object.keys(VIDEO_CONTENT_TYPES);
 
+export const IMAGE_CONTENT_TYPES: Record<string, string> = {
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".png": "image/png",
+	".webp": "image/webp",
+	".gif": "image/gif",
+};
+
+export const IMAGE_EXTENSIONS = Object.keys(IMAGE_CONTENT_TYPES);
+
+export const MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS, ...IMAGE_EXTENSIONS];
+
 export const LANGUAGE_MAP: Record<string, string> = {
 	cn: "中文",
 	en: "英语",
