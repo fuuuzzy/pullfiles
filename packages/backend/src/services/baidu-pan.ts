@@ -169,148 +169,119 @@ export function createBaiduPanClient(accessToken: string, db?: Database) {
 			signal?: AbortSignal,
 		): Promise<void> {
 			const url = `${dlink}&access_token=${accessToken}`;
-			let downloadedBytes = 0;
-			let totalBytes = 0;
 			const maxRetries = 3;
-			let attempt = 0;
 			const IDLE_TIMEOUT_MS = 60_000;
 
-			// We write incrementally. If we resume, we append.
-			const fileStream = createWriteStream(destPath, { flags: "a" });
+			for (let attempt = 0; attempt <= maxRetries; attempt++) {
+				if (signal?.aborted) {
+					throw new Error("Transfer cancelled");
+				}
 
-			try {
-				while (attempt <= maxRetries) {
-					if (signal?.aborted) {
-						throw new Error("Transfer cancelled");
-					}
+				let response: Response;
+				try {
+					response = await fetch(url, {
+						headers: { "User-Agent": "pan.baidu.com" },
+						redirect: "follow",
+						signal: signal ?? null,
+					});
 
-					let response: Response;
-					try {
-						const headers: Record<string, string> = { "User-Agent": "pan.baidu.com" };
-						if (downloadedBytes > 0) {
-							headers.Range = `bytes=${downloadedBytes}-`;
+					if (!response.ok) {
+						if (response.status === 403 || response.status === 404 || response.status === 410) {
+							throw new Error(
+								`Download failed: ${response.status} ${response.statusText} (likely expired link)`,
+							);
 						}
+						throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+					}
+				} catch (err: unknown) {
+					if (signal?.aborted) throw err;
+					const detailed = enrichFetchError(err);
+					if (detailed.message.includes("likely expired link")) throw detailed;
+					if (attempt >= maxRetries) throw detailed;
+					await new Promise((res) => setTimeout(res, 2000 * (attempt + 1)));
+					continue;
+				}
 
-						response = await fetch(url, {
-							headers,
-							redirect: "follow",
-							signal: signal ?? null,
+				if (!response.body) {
+					throw new Error("Response body is null");
+				}
+
+				const totalBytes = Number(response.headers.get("content-length") ?? 0);
+				let downloadedBytes = 0;
+				const fileStream = createWriteStream(destPath);
+				const reader = response.body.getReader();
+				let idleTimeout: NodeJS.Timeout | null = null;
+				let streamError: Error | null = null;
+
+				try {
+					while (true) {
+						const readPromise = reader.read();
+						const timeoutPromise = new Promise<never>((_, reject) => {
+							idleTimeout = setTimeout(() => {
+								reject(
+									new Error(`Download idle timeout: no data for ${IDLE_TIMEOUT_MS / 1000}s`),
+								);
+							}, IDLE_TIMEOUT_MS);
 						});
 
-						if (!response.ok && response.status !== 206) {
-							// 416 (Range Not Satisfiable) often means we already have everything
-							if (response.status === 416 && totalBytes > 0 && downloadedBytes >= totalBytes) {
-								break;
-							}
-							// 403/404/410 typically mean the dlink expired; bail out fast
-							// so the upper layer can refresh and retry with a new link.
-							if (response.status === 403 || response.status === 404 || response.status === 410) {
-								throw new Error(
-									`Download failed: ${response.status} ${response.statusText} (likely expired link)`,
-								);
-							}
-							throw new Error(`Download failed: ${response.status} ${response.statusText}`);
-						}
-					} catch (err: unknown) {
-						if (signal?.aborted) throw err;
-						const detailed = enrichFetchError(err);
-						// Don't retry expired link errors — let caller refresh.
-						if (detailed.message.includes("likely expired link")) throw detailed;
-						attempt++;
-						if (attempt > maxRetries) throw detailed;
-						await new Promise((res) => setTimeout(res, 2000 * attempt));
-						continue;
-					}
+						const { done, value } = await Promise.race([readPromise, timeoutPromise]);
 
-					if (totalBytes === 0) {
-						const contentLen = Number(response.headers.get("content-length") ?? 0);
-						totalBytes = response.status === 206 ? downloadedBytes + contentLen : contentLen;
-					}
-
-					if (!response.body) {
-						throw new Error("Response body is null");
-					}
-
-					const reader = response.body.getReader();
-					let idleTimeout: NodeJS.Timeout | null = null;
-					let streamError: Error | null = null;
-
-					try {
-						while (true) {
-							const readPromise = reader.read();
-							const timeoutPromise = new Promise<never>((_, reject) => {
-								idleTimeout = setTimeout(() => {
-									reject(
-										new Error(`Download idle timeout: no data for ${IDLE_TIMEOUT_MS / 1000}s`),
-									);
-								}, IDLE_TIMEOUT_MS);
-							});
-
-							const { done, value } = await Promise.race([readPromise, timeoutPromise]);
-
-							if (idleTimeout) {
-								clearTimeout(idleTimeout);
-								idleTimeout = null;
-							}
-
-							if (done) break;
-							if (!value) continue;
-
-							// Honour backpressure so we don't lose chunks at end-of-stream.
-							const ok = fileStream.write(value);
-							if (!ok) {
-								await new Promise<void>((res, rej) => {
-									const onDrain = () => {
-										fileStream.off("error", onErr);
-										res();
-									};
-									const onErr = (e: Error) => {
-										fileStream.off("drain", onDrain);
-										rej(e);
-									};
-									fileStream.once("drain", onDrain);
-									fileStream.once("error", onErr);
-								});
-							}
-							downloadedBytes += value.length;
-
-							if (onProgress) {
-								onProgress(downloadedBytes, totalBytes);
-							}
-						}
-						break;
-					} catch (err: unknown) {
-						streamError = enrichFetchError(err);
-					} finally {
 						if (idleTimeout) {
 							clearTimeout(idleTimeout);
 							idleTimeout = null;
 						}
-						try {
-							reader.releaseLock();
-						} catch {
-							// ignore — reader already released or stream errored
+
+						if (done) break;
+						if (!value) continue;
+
+						const ok = fileStream.write(value);
+						if (!ok) {
+							await new Promise<void>((res, rej) => {
+								const onDrain = () => {
+									fileStream.off("error", onErr);
+									res();
+								};
+								const onErr = (e: Error) => {
+									fileStream.off("drain", onDrain);
+									rej(e);
+								};
+								fileStream.once("drain", onDrain);
+								fileStream.once("error", onErr);
+							});
+						}
+						downloadedBytes += value.length;
+
+						if (onProgress) {
+							onProgress(downloadedBytes, totalBytes);
 						}
 					}
 
-					if (streamError) {
-						// If user explicitly cancelled, propagate immediately.
-						if (signal?.aborted) throw streamError;
+					// Flush and close the stream
+					await new Promise<void>((res) => {
+						fileStream.end(() => res());
+					});
 
-						// undici may surface network drops as AbortError even without our
-						// signal being aborted. Treat those as transient network failures
-						// and retry instead of bailing out.
-						attempt++;
-						if (attempt > maxRetries) throw streamError;
-						await new Promise((res) => setTimeout(res, 2000 * attempt));
+					console.warn("[download] completed:", JSON.stringify({ destPath, downloadedBytes, totalBytes }));
+					return;
+				} catch (err: unknown) {
+					streamError = enrichFetchError(err);
+					fileStream.destroy();
+				} finally {
+					if (idleTimeout) {
+						clearTimeout(idleTimeout);
+						idleTimeout = null;
+					}
+					try {
+						reader.releaseLock();
+					} catch {
+						// ignore
 					}
 				}
-			} finally {
-				// Wait for the file stream to flush all buffered writes before returning.
-				// Otherwise the caller may see a truncated file when control returns.
-				await new Promise<void>((res) => {
-					fileStream.end(() => res());
-				});
+
+				if (signal?.aborted) throw streamError;
+
+				if (attempt >= maxRetries) throw streamError;
+				await new Promise((res) => setTimeout(res, 2000 * (attempt + 1)));
 			}
 		},
 	};

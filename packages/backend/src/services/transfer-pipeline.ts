@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, renameSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, statSync, unlinkSync } from "node:fs";
 import { extname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Episode } from "@ls-pull-video/shared";
@@ -251,6 +251,16 @@ async function processEpisode(
 		} else {
 			throw err;
 		}
+	}
+
+	// Validate downloaded file
+	if (!existsSync(tempPath)) {
+		throw new Error(`Download completed but file not found on disk: ${tempPath}`);
+	}
+	const fileSize = statSync(tempPath).size;
+	if (fileSize === 0) {
+		cleanupTemp(tempPath);
+		throw new Error(`Download completed but file is empty (0 bytes): ${episode.filename}`);
 	}
 
 	ctx.episodesRepo.updateStatus(episode.id, "downloaded");
