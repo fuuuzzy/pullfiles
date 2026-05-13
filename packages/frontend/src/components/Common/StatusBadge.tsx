@@ -15,6 +15,11 @@ const statusConfig: Record<string, { label: string; color: string; bg: string }>
 		color: "var(--color-status-downloaded)",
 		bg: "rgba(6, 182, 212, 0.1)",
 	},
+	compressing: {
+		label: "压缩中",
+		color: "var(--color-purple-400, #a78bfa)",
+		bg: "rgba(167, 139, 250, 0.1)",
+	},
 	uploading: {
 		label: "上传中",
 		color: "var(--color-status-uploading)",
@@ -56,7 +61,9 @@ export function StatusBadge({ status }: { status: AnyEpisodeStatus }) {
 				style={{
 					background: config.color,
 					boxShadow:
-						status === "downloading" || status === "uploading" ? `0 0 6px ${config.color}` : "none",
+						status === "downloading" || status === "uploading" || status === "compressing"
+						? `0 0 6px ${config.color}`
+						: "none",
 				}}
 			/>
 			{config.label}

@@ -174,7 +174,7 @@ export function createEpisodesRepo(db: Database.Database) {
 		resetStuckEpisodes(): number {
 			const result = db
 				.prepare(
-					"UPDATE episodes SET status = 'pending', error_message = NULL, updated_at = datetime('now') WHERE status IN ('downloading', 'downloaded', 'uploading')",
+					"UPDATE episodes SET status = 'pending', error_message = NULL, updated_at = datetime('now') WHERE status IN ('downloading', 'downloaded', 'compressing', 'uploading')",
 				)
 				.run();
 			return result.changes;

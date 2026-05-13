@@ -16,6 +16,7 @@ const filters: { value: EpisodeStatus | "all"; label: string }[] = [
 	{ value: "pending", label: "队列中" },
 	{ value: "unparsed", label: "未解析" },
 	{ value: "downloading", label: "下载中" },
+	{ value: "compressing", label: "压缩中" },
 	{ value: "uploading", label: "上传中" },
 	{ value: "uploaded", label: "已上传" },
 	{ value: "failed", label: "失败" },
