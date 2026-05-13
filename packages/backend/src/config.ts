@@ -30,7 +30,9 @@ export type Config = z.infer<typeof configSchema>;
 export function loadConfig(): Config {
 	const result = configSchema.safeParse(process.env);
 	if (!result.success) {
-		for (const _issue of result.error.issues) {
+		console.error("FATAL: Environment variable validation failed:");
+		for (const issue of result.error.issues) {
+			console.error(`  - ${issue.path.join(".")}: ${issue.message}`);
 		}
 		process.exit(1);
 	}

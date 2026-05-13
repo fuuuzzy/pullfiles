@@ -32,7 +32,16 @@ function runMigrations(db: Database.Database): void {
 		const migration = ALL_MIGRATIONS[i];
 		if (!migration) continue;
 		if (!appliedIds.has(i)) {
-			db.exec(migration);
+			try {
+				db.exec(migration);
+			} catch (err) {
+				const msg = err instanceof Error ? err.message : String(err);
+				if (msg.includes("duplicate column name")) {
+					// Column already exists from a partial previous run — skip
+				} else {
+					throw err;
+				}
+			}
 			db.prepare("INSERT INTO _migrations (id, sql) VALUES (?, ?)").run(i, migration);
 		}
 	}
