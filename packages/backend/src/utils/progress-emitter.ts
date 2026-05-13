@@ -49,3 +49,4 @@ class ProgressEmitter extends EventEmitter {
 }
 
 export const progressEmitter = new ProgressEmitter();
+progressEmitter.setMaxListeners(50);
