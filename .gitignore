@@ -9,3 +9,5 @@ dist/
 *.tsbuildinfo
 .ace-tool/
 logs/
+*.xlsx
+request.json

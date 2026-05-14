@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      xlsx:
+        specifier: ^0.18.5
+        version: 0.18.5
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.4.13

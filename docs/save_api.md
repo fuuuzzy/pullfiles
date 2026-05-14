@@ -1,7 +1,7 @@
 ### 保存剧集信息
 
 - Request
-    - Path: `https://studio.luckyshort.net/episodes`
+    - Path: `https://studio.luckyshort.net/intranet/episodes/all-sync`
     - Method: `post`
     - Body:
       ```json5
@@ -41,7 +41,7 @@
        // 文件名
        "originalName": "xxx",
        // 默认值
-       "transtoreStatus": "transtored",
+       "transtoreStatus": "transtore",
        // 文件url 取r2的url
        "uploadUrl": "xxx",
        // 类型 默认upload
